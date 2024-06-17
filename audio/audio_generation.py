@@ -1,45 +1,34 @@
-from transformers import pipeline
-from IPython.display import Audio
-import numpy as np
-import bpy # type: ignore
-from pydub import AudioSegment
+import bpy
+from transformers import AutoProcessor, MusicgenForConditionalGeneration
+
 # use musicgen-small,medium
 
-def generate_audio(prompt):
-  music_pipe = pipeline("text-to-audio", model="facebook/musicgen-small")
-    #controls the length of the the song
-  forward_params = {"max_new_tokens": 512}
 
-  output = self.music_pipe(prompt, forward_params=forward_params)
-
-  audio_data = np.array(output["audio"][0])
-  sampling_rate = output["sampling_rate"]
-
-  # Create an AudioSegment object
-  audio_segment = AudioSegment(
-      audio_data.tobytes(),
-      frame_rate=sampling_rate,
-      sample_width=audio_data.dtype.itemsize,
-      channels=1  # Assuming mono audio
-  )
-
-  # Save the audio to an MP3 file
-  audio_segment.export(prompt + ".mp3", format="mp3")
-
-  Audio(output["audio"][0], rate=output["sampling_rate"])
-
-  print("Saved audio as:", prompt, ".mp3")
-
-def add_audio(audio_name, audio_path, start_frame=1, volume=0.5):
+def generate_audio(prompt="", length=10):
   """
-  Imports given audio to blender
+  Generates an audioclip using a transformer
   
   Args:
-      audio_name (string): name given to the audio, shown in blender
-      audio_path (string): the local path to the imported audio
-      start_frame (int): the frame to start the audio on
-      volume (float): a float between 0-1 representing volume
+    prompt (str): the prompt given to the model.
+    length (int): the length of the audioclip in seconds.
   """
-  scene = bpy.context.scene
-  audio_strip = scene.sequence_editor.sequences.new_sound(name=audio_name, filepath=audio_path, channel=1, frame_start=start_frame)
-  audio_strip.volume = volume
+  processor = AutoProcessor.from_pretrained("facebook/musicgen-small")
+  model = MusicgenForConditionalGeneration.from_pretrained("facebook/musicgen-small")
+
+  inputs = processor(
+      text=[prompt],
+      padding=True,
+      return_tensors="pt",
+  )
+
+  audio_values = model.generate(**inputs, max_new_tokens = round(length*51.2))
+
+  import scipy
+
+  sampling_rate = model.config.audio_encoder.sampling_rate
+  audio_name = prompt + ".wav"
+
+  scipy.io.wavfile.write(prompt + ".wav", rate=sampling_rate, data=audio_values[0, 0].numpy())
+
+  return audio_name
+

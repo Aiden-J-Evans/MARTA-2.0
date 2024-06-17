@@ -1,10 +1,16 @@
 import bpy # type: ignore
 
+
+
 def init():
   """Initialize the scene"""
   bpy.ops.object.select_all(action="DESELECT")
   bpy.data.objects['Cube'].select_set(True)
   bpy.ops.object.delete()
+  open_json()
+
+def open_json():
+   print("opening")
 
 def render_floor_plain(location=(0, 0, 0), scale=(10, 10, 1), image_path="", tile_size=(1, 1)):
   """
@@ -129,6 +135,21 @@ def render_skybox(image_path=""):
   links.new(mapping_node.outputs['Vector'], env_tex_node.inputs['Vector'])
   links.new(env_tex_node.outputs['Color'], background_node.inputs['Color'])
   links.new(background_node.outputs['Background'], world_output_node.inputs['Surface'])
+
+def add_audio(audio_name, audio_path, start_frame=1, volume=0.5):
+  """
+  Imports given audio to blender
+  
+  Args:
+      audio_name (string): name given to the audio, shown in blender
+      audio_path (string): the local path to the imported audio
+      start_frame (int): the frame to start the audio on
+      volume (float): a float between 0-1 representing volume
+  """
+  scene = bpy.context.scene
+  audio_strip = scene.sequence_editor.sequences.new_sound(name=audio_name, filepath=audio_path, channel=1, frame_start=start_frame)
+  audio_strip.volume = volume
+  
 
 init()
 render_floor_plain((0, 0, 0), (100, 100, 1), "C:/Users/aiden/Pictures/Camera Roll/test.jpg", (1, 1))
