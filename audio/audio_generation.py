@@ -1,6 +1,6 @@
 import bpy
 from transformers import AutoProcessor, MusicgenForConditionalGeneration
-
+import os
 # use musicgen-small,medium
 
 
@@ -11,6 +11,9 @@ def generate_audio(prompt="", length=10):
   Args:
     prompt (str): the prompt given to the model.
     length (int): the length of the audioclip in seconds.
+
+  Returns:
+    The path to the audio file
   """
   processor = AutoProcessor.from_pretrained("facebook/musicgen-small")
   model = MusicgenForConditionalGeneration.from_pretrained("facebook/musicgen-small")
@@ -30,5 +33,5 @@ def generate_audio(prompt="", length=10):
 
   scipy.io.wavfile.write(prompt + ".wav", rate=sampling_rate, data=audio_values[0, 0].numpy())
 
-  return audio_name
+  return os.getcwd() + "\\" + audio_name
 
