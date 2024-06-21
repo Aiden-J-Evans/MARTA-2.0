@@ -1,78 +1,19 @@
 {
     "1": {
-        "audio_path": "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\In a bustling town called Jericho , there lived a rich man named Zacchaeus.wav",
+        "audio_path": "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\0.wav",
         "characters": {
-            "zacchaeus": {
-                "animation": "idle"
+            "remy": {
+                "animation": "walk"
             }
         }
     },
-    "241": {
-        "audio_path": "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\He was a tax collector , but many disliked him for being greedy and unfair.wav",
+    "211": {
+        "audio_path": "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\1.wav",
         "characters": {
-            "zacchaeus": {
-                "animation": "idle"
+            "remy": {
+                "animation": "dance"
             }
         }
     },
-    "511": {
-        "audio_path": "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\One day , Zacchaeus heard about Jesus , a kind teacher visiting their town.wav",
-        "characters": {
-            "zacchaeus": {
-                "animation": "idle"
-            },
-            "jesus": {
-                "animation": "idle"
-            }
-        }
-    },
-    "751": {
-        "audio_path": "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\Curious , Zacchaeus climbed a tree to see Jesus above the crowd.wav",
-        "characters": {
-            "zacchaeus": {
-                "animation": "climbed"
-            },
-            "jesus": {
-                "animation": "see"
-            }
-        }
-    },
-    "961": {
-        "audio_path": "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\Jesus noticed him and surprised everyone by saying he would visit Zacchaeus ' house.wav",
-        "characters": {
-            "jesus": {
-                "animation": "noticed"
-            },
-            "zacchaeus": {
-                "animation": "surprised"
-            }
-        }
-    },
-    "1201": {
-        "audio_path": "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\This changed Zacchaeus.wav",
-        "characters": {
-            "zacchaeus": {
-                "animation": "changed"
-            }
-        }
-    },
-    "1261": {
-        "audio_path": "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\He promised to be honest and share his wealth with those in need.wav",
-        "characters": {
-            "zacchaeus": {
-                "animation": "idle"
-            }
-        }
-    },
-    "1501": {
-        "audio_path": "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\Jesus praised Zacchaeus for changing his ways , showing that everyone can find forgiveness and start anew.wav",
-        "characters": {
-            "jesus": {
-                "animation": "idle"
-            },
-            "zacchaeus": {
-                "animation": "idle"
-            }
-        }
-    }
+    "end_frame": 421
 }

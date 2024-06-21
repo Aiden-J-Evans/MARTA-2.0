@@ -1,140 +1,385 @@
-import bpy # type: ignore
+import bpy
+from mathutils import Vector
 import os
 import json
+import math
 
-def init():
-  """Initialize the scene"""
-  bpy.ops.object.select_all(action="DESELECT")
-  bpy.data.objects['Cube'].select_set(True)
-  bpy.ops.object.delete()
+class AnimationHandler:
+    def __init__(self, root_path, character_data, actions_list):
+        self.root_path = root_path
+        self.character_name = character_data['name']
+        self.actions_list = actions_list
+        self.target_armature = None
+        self.idle_action_armature = None
 
-def render_floor_plain(location=(0, 0, 0), scale=(10, 10, 1), image_path="", tile_size=(1, 1)):
-  """
-  Renders the floor plain from a local image
-  
-  Args:
-    location (tuple): Represents the vector coodinates of the plain.
-    scale (tuple): Represents the vector scale of the plain.
-    image_path (str): The local path to the base image of the plain.
-    tile_size (tuple): The tilesize for the image displayed on the plain.
-  """
+    def clear_scene(self):
+        """Delete all objects from the scene"""
+        if bpy.context.active_object and bpy.context.active_object.mode == 'EDIT':
+            bpy.ops.object.editmode_toggle()
+            
+        for obj in bpy.data.objects:
+            obj.hide_set(False)
+            obj.hide_select = False
+            obj.hide_viewport = False
+            
+        for action in bpy.data.actions:
+            bpy.data.actions.remove(action)
+            
+        bpy.ops.object.select_all(action='SELECT')
+        bpy.ops.object.delete()
+        
+        bpy.ops.outliner.orphans_purge(do_local_ids=True, do_linked_ids=True, do_recursive=True)
+            
+    def load_rig(self, filepath: str, name: str):
+        """Load an animation rig from an FBX file"""
+        bpy.ops.import_scene.fbx(filepath=filepath)
+        rig = bpy.context.active_object
+        rig.name = name
+        rig.show_in_front = True
+        rig.animation_data.action.name = f'{name}_action'
+        return rig
 
-  # Delete existing plane if it exists
-  if "Floor" in bpy.data.objects:
-      bpy.data.objects["Floor"].select_set(True)
-      bpy.ops.object.delete()
-  
-  # Create a new plane
-  bpy.ops.mesh.primitive_plane_add(size=1, location=location)
-  floor = bpy.context.active_object
-  floor.name = "Floor"
-  
-  # Scale the plane to desired size
-  floor.scale = scale
-  
-  # Create a new material
-  mat = bpy.data.materials.new(name="FloorMaterial")
-  mat.use_nodes = True
-  nodes = mat.node_tree.nodes
-  links = mat.node_tree.links
-  
-  # Clear default nodes
-  for node in nodes:
-      nodes.remove(node)
-  
-  # Create necessary nodes
-  output_node = nodes.new(type='ShaderNodeOutputMaterial')
-  output_node.location = 400, 0
-  
-  diffuse_node = nodes.new(type='ShaderNodeBsdfDiffuse')
-  diffuse_node.location = 200, 0
-  
-  texture_node = nodes.new(type='ShaderNodeTexImage')
-  texture_node.location = 0, 0
-  if image_path:
-      texture_node.image = bpy.data.images.load(image_path)
-  
-  tex_coord_node = nodes.new(type='ShaderNodeTexCoord')
-  tex_coord_node.location = -600, 0
-  
-  mapping_node = nodes.new(type='ShaderNodeMapping')
-  mapping_node.location = -300, 0
-  mapping_node.inputs['Scale'].default_value = (scale[0] / tile_size[0], scale[1] / tile_size[1], 1)
-  
-  # Link nodes
-  links.new(tex_coord_node.outputs['Generated'], mapping_node.inputs['Vector'])
-  links.new(mapping_node.outputs['Vector'], texture_node.inputs['Vector'])
-  links.new(texture_node.outputs['Color'], diffuse_node.inputs['Color'])
-  links.new(diffuse_node.outputs['BSDF'], output_node.inputs['Surface'])
-  
-  # Assign material to the plane
-  if floor.data.materials:
-      floor.data.materials[0] = mat
-  else:
-      floor.data.materials.append(mat)
+    def push_action_to_nla(self, armature, action_name, start_frame, sequence_end_frame):
+        """Push down action to NLA"""
+        idle_action_name = "idle_rig_action"
+        # Ensure the armature is in OBJECT mode
+        bpy.ops.object.mode_set(mode='OBJECT')
 
-  # Apply UV mapping to tile the texture
-  bpy.context.view_layer.objects.active = floor
-  bpy.ops.object.mode_set(mode='EDIT')
-  bpy.ops.uv.cube_project(cube_size=1.0)
-  bpy.ops.object.mode_set(mode='OBJECT')
+        
+        # Find the action
+        action = bpy.data.actions.get(action_name)
+        if action is None:
+            raise ValueError(f"Action '{action_name}' not found")
+        
+        idle_action = bpy.data.actions.get(idle_action_name)
+        if idle_action is None:
+            raise ValueError(f"Idle action '{idle_action_name}' not found")
+        
+        
 
-  return floor
+        # Set the action to the armature
+        if not armature.animation_data:
+            armature.animation_data_create()
+        armature.animation_data.action = action
+        
+        # Create or find the NLA track
+        nla_tracks = armature.animation_data.nla_tracks
+        if len(nla_tracks) == 0:
+            nla_track = nla_tracks.new()
+        else:
+            nla_track = nla_tracks[0]
+        
+        # Push the action down to the NLA track
+        nla_strip = nla_track.strips.new(action_name, int(start_frame), action)
+        
+        action_end_frame = nla_strip.frame_end
 
-def render_skybox(image_path=""):
-  """
-  Renders the skybox from an image
+        # Clear the current action
+        armature.animation_data.action = None
 
-  Args:
-    image_path (str): Local path of the image.
-  
-  
-  
-  """
-    # Get the current scene
-  scene = bpy.context.scene
-  
-  # Enable nodes on the world
-  world = scene.world
-  world.use_nodes = True
-  tree = world.node_tree
-  nodes = tree.nodes
-  
-  # Clear all nodes to start fresh
-  for node in nodes:
-      nodes.remove(node)
-  
-  # Create a background node
-  background_node = nodes.new(type='ShaderNodeBackground')
-  background_node.location = 0, 0
-  
-  # Create an environment texture node
-  env_tex_node = nodes.new(type='ShaderNodeTexEnvironment')
-  env_tex_node.location = -300, 0
-  env_tex_node.image = bpy.data.images.load(image_path)
-  
-  # Create a texture coordinate node
-  tex_coord_node = nodes.new(type='ShaderNodeTexCoord')
-  tex_coord_node.location = -600, 0
-  
-  # Create a mapping node for rotation or translation adjustments
-  mapping_node = nodes.new(type='ShaderNodeMapping')
-  mapping_node.location = -450, 0
-  
-  # Create a world output node
-  world_output_node = nodes.new(type='ShaderNodeOutputWorld')
-  world_output_node.location = 300, 0
-  
-  # Link the nodes
-  links = tree.links
-  links.new(tex_coord_node.outputs['Generated'], mapping_node.inputs['Vector'])
-  links.new(mapping_node.outputs['Vector'], env_tex_node.inputs['Vector'])
-  links.new(env_tex_node.outputs['Color'], background_node.inputs['Color'])
-  links.new(background_node.outputs['Background'], world_output_node.inputs['Surface'])
+        if action_end_frame < sequence_end_frame and action_name != idle_action_name:
+            idle_strip = nla_track.strips.new(idle_action_name, int(action_end_frame) + 1, idle_action)
+            idle_strip.frame_end = sequence_end_frame
+            idle_strip.action_frame_end = idle_strip.frame_end - idle_strip.frame_start
+        elif action_end_frame > sequence_end_frame:
+            nla_strip.frame_end = sequence_end_frame
 
-  
 
-  
+        self.set_nla_strip_properties(self.target_armature, action_name)
 
-init()
-render_floor_plain((0, 0, 0), (100, 100, 1), "C:/Users/aiden/Pictures/Camera Roll/test.jpg", (1, 1))
+        return nla_strip.frame_end
+
+
+
+
+    def get_strip(self, rig, action_name):
+        for track in rig.animation_data.nla_tracks:
+            for strip in track.strips:
+                if strip.name == action_name:
+                    return strip
+        print(f"No active NLA strip found for action '{action_name}'.")
+
+    def set_nla_strip_properties(self, rig, action_name):
+        strip = self.get_strip(rig, action_name)
+        if strip:
+            strip.extrapolation = 'NOTHING'
+            strip.use_auto_blend = False
+            print(f"Properties set for active NLA strip for action '{action_name}'.")
+
+    def update_end_frame(self, sequence_list):
+        """Update the end frame of the animation if it exceeds the default value."""
+        total = 0   
+        for action_name in sequence_list:
+            strip = self.get_strip(self.target_armature, action_name)
+            period = int(strip.frame_end - strip.frame_start)
+            total += period
+        total += 10  # adding extra frames
+        bpy.context.scene.frame_end = total
+        return total
+
+    def get_cycle_offset(self, rig, action_name):
+        """Get the amount that the armature moves with each animation cycle"""
+        action = bpy.data.actions.get(action_name)
+        if action is None:
+            raise ValueError(f"Action '{action_name}' not found")
+            
+        start_pos = [0, 0, 0]
+        end_pos = [0, 0, 0]
+        for curve in action.fcurves:
+            if "mixamorig:Hips" not in curve.data_path: continue
+            if "location" not in curve.data_path: continue
+            channel = curve.array_index
+            
+            start_pos[channel] = curve.keyframe_points[0].co.y
+            end_pos[channel] = curve.keyframe_points[-1].co.y
+            
+        start_pos_world = Vector(start_pos) @ rig.matrix_world
+        end_pos_world = Vector(end_pos) @ rig.matrix_world
+        offset = [-(end_pos_world[i] - start_pos_world[i]) for i in range(3)]
+        
+        offset[2] = 0
+        return Vector(offset)
+
+    def organize_nla_sequences(self, sequence_list):
+        """Organize sequences of animations in the NLA Editor for the target armature."""
+        print("length of sequence list: " + str(len(sequence_list)))
+        for index, action_name in enumerate(sequence_list):
+            print("action name: " + action_name)
+            print("index: " + str(index))
+            if index != 0 and audio_frames[index-1][0] != last_frame:
+                print(len(audio_frames))
+                self.push_action_to_nla(self.target_armature, action_name, audio_frames[index-1][0], audio_frames[index][0])
+            
+        
+        self.update_end_frame(sequence_list) 
+            
+
+    def organize_positions(self, armature, sequence_list):
+        """Organize positions for sequences of animations in the NLA Editor."""
+        location = Vector((0, 0, 0))
+
+        # Ensure the armature has animation data
+        if not armature.animation_data:
+            armature.animation_data_create()
+
+        # Ensure the armature has an action to hold keyframes
+        if not armature.animation_data.action:
+            armature.animation_data.action = bpy.data.actions.new(name="TempAction")
+
+        action = armature.animation_data.action
+
+        for action_name in sequence_list[1:]:  
+            offset = self.get_cycle_offset(armature, action_name)
+            end_location = location + offset
+
+            strip = self.get_strip(armature, action_name)
+            
+            # Insert keyframes for start and end locations of the strip
+            for frame, loc in [(strip.frame_start, location), (strip.frame_end, location), (strip.frame_end + 1, end_location)]:
+                self.insert_location_keyframe(armature, frame, loc)
+
+            location = end_location
+
+    def insert_location_keyframe(self, armature, frame, location):
+        """Insert a location keyframe for the armature at the specified frame."""
+        armature.location = location
+        armature.keyframe_insert(data_path="location", frame=frame)
+
+    def add_audio(self):
+        """Add audio strips to the sequencer based on the audio frames."""
+        scene = bpy.data.scenes[0]
+
+        # Ensure the scene's sequence editor exists
+        if not scene.sequence_editor:
+            scene.sequence_editor_create()
+
+        sequence_editor = scene.sequence_editor
+
+        # Add audio strips
+        for frame, audio_path in audio_frames:
+            if audio_path is not None:
+                sequence_editor.sequences.new_sound(name=os.path.basename(audio_path), filepath=audio_path, channel=1, frame_start=frame)
+
+    def create_cameras(self):
+        """Create a camera for following the character"""
+        char_cam_data = bpy.data.cameras.new(name='Character_Camera')
+        char_camera = bpy.data.objects.new(name='Character_Camera', object_data=char_cam_data)
+        bpy.context.collection.objects.link(char_camera)
+        return char_camera
+
+    def camera_follow_character(self, target_armature, camera_char, scene, dpgraph):
+        """Follow a specific bone with the camera."""
+    # I am using hip bone 
+        target_armature = scene.objects.get('target_rig')
+        target_armature = target_armature.evaluated_get(dpgraph)
+        if camera_char and target_armature:
+            # Get the location of the hips bone
+            hips_bone = target_armature.pose.bones.get("mixamorig:Hips")
+            if hips_bone:
+                # Calculate the location of the hips bone in world space
+                hips_location = target_armature.matrix_world @ hips_bone.head
+                
+                # Can adjust the distance through arguments depending upon the situation accordingly  
+                distance_y = 5  # Distance along the Y-axis
+                distance_z = 2  # Height above the hips bone
+                
+                # Calculate camera position
+                camera_location = hips_location + Vector((0, -distance_y, distance_z))
+                
+                # Move the camera to the calculated position
+                camera_char.location = camera_location
+                print(f'Camera location: {hips_bone.head}')
+                
+                # Make the camera look at the hips bone
+                direction = hips_location - camera_char.location
+                rot_quat = direction.to_track_quat('-Z', 'Y')
+                camera_char.rotation_euler = rot_quat.to_euler()
+                
+                # Adjust camera lens to broaden the view
+                camera_char.data.angle = math.radians(70)  # Adjust angle as needed for wider view
+            else:
+                print("Hips bone not found")
+        else:
+            print("Camera or target armature not found")
+
+    def frame_change_handler(self, scene, dpgraph):
+        """Frame change handler to follow the character with the camera"""
+        char_camera = scene.objects.get('Character_Camera')
+        self.camera_follow_character(self.target_armature, char_camera, scene, dpgraph)
+        print("Updating camera")
+
+    def render_animation(self, root_path, sequence_list,output_filename ):
+        """Render the animation to an MP4 file"""
+        output_path = os.path.join(root_path, output_filename)
+        scene = bpy.context.scene
+        scene.render.image_settings.file_format = 'FFMPEG'
+        scene.render.ffmpeg.format = 'MPEG4'
+        scene.render.ffmpeg.codec = 'H264'
+        scene.render.ffmpeg.constant_rate_factor = 'HIGH'
+        scene.render.ffmpeg.ffmpeg_preset = 'GOOD'
+        scene.render.filepath = output_path
+
+        scene.render.ffmpeg.audio_codec = 'AAC'
+        scene.render.ffmpeg.audio_bitrate = 192
+
+        #scene.eevee.use_shadow = False  # For Eevee render engine
+        scene.cycles.use_shadow = False  # For Cycles render engin
+
+        # Set output settings
+        scene.render.resolution_x = 1280
+        scene.render.resolution_y = 720
+        scene.render.resolution_percentage = 100
+        scene.frame_start = 1
+        scene.frame_end = self.update_end_frame(sequence_list) 
+
+        
+
+        # Set the active camera
+        char_camera = bpy.data.objects.get('Character_Camera')
+        if char_camera:
+            bpy.context.scene.camera = char_camera
+        else:
+            print("No camera found. Rendering without setting an active camera.")
+
+        # Render the animation
+        bpy.ops.render.render(animation=True)
+
+    def setup_lighting(self):
+        # Clear existing lights
+        bpy.ops.object.select_all(action='DESELECT')
+        bpy.ops.object.select_by_type(type='LIGHT')
+        bpy.ops.object.delete()
+
+        # Add a Sun Lamp
+        bpy.ops.object.light_add(type='SUN', radius=1, location=(5, 5, 0))
+        sun = bpy.context.object
+        sun.data.energy = 3.0  # Set light energy
+        sun.data.color = (1.0, 0.5, 0.2)  # Set light color (white)
+   
+
+        # Add a Point Lamp
+        bpy.ops.object.light_add(type='POINT', radius=1, location=(0, 0, 5))
+        point = bpy.context.object
+        point.data.energy = 100.0  # Set light energy
+        point.data.color = (1.0, 0.5, 0.2)  # Set light color (orange)
+
+        # Add a Spot Lamp
+        bpy.ops.object.light_add(type='SPOT', radius=1, location=(-5, -5, 5))
+        spot = bpy.context.object
+        spot.data.energy = 5.0  # Set light energy
+        spot.data.color = (0.2, 0.5, 1.0)  # Set light color (blue)
+
+        # Set spot lamp cone angle and blend
+        spot.data.spot_size = 1.0  # Set spot angle
+        spot.data.spot_blend = 0.2  # Set spot blend
+
+        # Set active camera for rendering
+        char_camera = bpy.data.objects.get('Character_Camera')
+        if char_camera:
+            bpy.context.scene.camera = char_camera
+        else:
+            print("No camera found. Rendering without setting an active camera.")
+
+
+    def run(self):
+        self.clear_scene()
+
+        # Load the main target armature
+        target_fbx_path = os.path.join(self.root_path, f"{self.character_name}.fbx")
+        self.target_armature = self.load_rig(target_fbx_path, 'target_rig')
+
+        # Load and process each action
+        for action_name in self.actions_list:
+            action_fbx_path = os.path.join(self.root_path, f"{action_name}.fbx")
+            rig_name = action_name.lower().replace(" ", "_") + "_rig"
+            action_armature = self.load_rig(action_fbx_path, rig_name)
+            action_armature.hide_set(True)
+            
+        self.idle_action_armature = self.load_rig(self.root_path + "\\Idle.fbx", "idle_action_rig")
+        self.idle_action_armature.hide_set(True)
+
+        
+        # Organize the sequences and positions
+        sequence_list = [f"{action.lower().replace(' ', '_')}_rig_action" for action in self.actions_list]
+        self.organize_nla_sequences(sequence_list)
+        self.organize_positions(self.target_armature, sequence_list)
+        self.add_audio()
+        self.setup_lighting()
+
+        char_camera = self.create_cameras()
+        #self.camera_follow_character(self.target_armature, char_camera)
+
+        # Register the frame change handler to follow the character during animation
+        bpy.app.handlers.frame_change_pre.clear()
+        bpy.app.handlers.frame_change_post.clear()
+        bpy.app.handlers.frame_change_post.append(lambda scene, dpgraph: self.frame_change_handler(scene, dpgraph))
+
+        self.render_animation(self.root_path, sequence_list, "output.mp4")
+
+
+# path to animation/character folder
+root_path = os.getcwd() + "\\animations"
+
+f = open(os.getcwd() + "\\frame_data.json")
+frame_data = json.load(f)
+audio_frames = []
+
+character_data = {'name': 'Remy'}
+actions_list = ["Idle"]
+
+for sequence, data in frame_data.items():
+    if sequence.isdigit():
+        audio_frames.append([int(sequence), data["audio_path"]])
+
+        for character, char_data in data['characters'].items():
+            print(f'Loading: {character}')
+            actions_list.append(char_data["animation"])
+
+            print(f'Playing: {char_data["animation"]}')
+
+
+last_frame = int(frame_data['end_frame'])
+audio_frames.append([last_frame, None])
+
+animation_handler = AnimationHandler(root_path, character_data, actions_list)
+animation_handler.run()

@@ -4,7 +4,7 @@ import os
 # use musicgen-small,medium
 
 
-def generate_audio(prompt="", length=10):
+def generate_audio(index, prompt="", length=10):
   """
   Generates an audioclip using a transformer
   
@@ -29,9 +29,9 @@ def generate_audio(prompt="", length=10):
   import scipy
 
   sampling_rate = model.config.audio_encoder.sampling_rate
-  audio_name = prompt + ".wav"
+  audio_name = str(index) + ".wav"
 
-  scipy.io.wavfile.write(prompt + ".wav", rate=sampling_rate, data=audio_values[0, 0].numpy())
+  scipy.io.wavfile.write(os.getcwd() + "\\audio\\generated_audio\\" + audio_name, rate=sampling_rate, data=audio_values[0, 0].numpy())
 
-  return os.getcwd() + "\\" + audio_name
+  return os.getcwd() + "\\audio\\generated_audio\\" + audio_name
 
