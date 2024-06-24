@@ -1,11 +1,9 @@
 from rendering.start_render import render
 from audio.audio_generation import generate_audio
-from nlp.nlp_manager import ask_gpt
 from nlp.nlp_manager import estimate_sentence_length
 import spacy
 import json
 from transformers import pipeline
-import os
 
 prompt = input("Please enter your story (End with a period): ")
 nlp = spacy.load("en_core_web_sm")

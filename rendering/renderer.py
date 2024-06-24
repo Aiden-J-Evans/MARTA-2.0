@@ -3,6 +3,7 @@ from mathutils import Vector
 import os
 import json
 import math
+import random
 
 class AnimationHandler:
     def __init__(self, root_path, character_data, actions_list):
@@ -220,8 +221,8 @@ class AnimationHandler:
                 hips_location = target_armature.matrix_world @ hips_bone.head
                 
                 # Can adjust the distance through arguments depending upon the situation accordingly  
-                distance_y = 5  # Distance along the Y-axis
-                distance_z = 2  # Height above the hips bone
+                distance_y = 10  # Distance along the Y-axis
+                distance_z = 5  # Height above the hips bone
                 
                 # Calculate camera position
                 camera_location = hips_location + Vector((0, -distance_y, distance_z))
@@ -284,43 +285,82 @@ class AnimationHandler:
         # Render the animation
         bpy.ops.render.render(animation=True)
 
-    def setup_lighting(self):
-        # Clear existing lights
-        bpy.ops.object.select_all(action='DESELECT')
-        bpy.ops.object.select_by_type(type='LIGHT')
-        bpy.ops.object.delete()
+    def create_box_around_character(self):
+        """Create a box around the character to absorb light"""
+        Size = 40
+        bpy.ops.mesh.primitive_cube_add(size=Size, location=(0, 0, Size / 2))
+        self.box_object = bpy.context.active_object
 
-        # Add a Sun Lamp
-        bpy.ops.object.light_add(type='SUN', radius=1, location=(5, 5, 0))
-        sun = bpy.context.object
-        sun.data.energy = 3.0  # Set light energy
-        sun.data.color = (1.0, 0.5, 0.2)  # Set light color (white)
-   
+    def set_box_properties(self, walls_color=(0.5, 0.7, 0.5, 1), floor_color=(0.82, 0.82, 0.82, 1), ceiling_color=(1, 1, 1, 1)):
+        """Set properties of the box with specific materials and colors"""
+        if not self.box_object:
+            raise ValueError("Box object not found. Create the box first.")
 
-        # Add a Point Lamp
-        bpy.ops.object.light_add(type='POINT', radius=1, location=(0, 0, 5))
-        point = bpy.context.object
-        point.data.energy = 100.0  # Set light energy
-        point.data.color = (1.0, 0.5, 0.2)  # Set light color (orange)
+        # Create materials
+        walls = bpy.data.materials.new(name='walls')
+        floor = bpy.data.materials.new(name='floor')
+        ceiling = bpy.data.materials.new(name='ceiling')
 
-        # Add a Spot Lamp
-        bpy.ops.object.light_add(type='SPOT', radius=1, location=(-5, -5, 5))
-        spot = bpy.context.object
-        spot.data.energy = 5.0  # Set light energy
-        spot.data.color = (0.2, 0.5, 1.0)  # Set light color (blue)
+        # Set the colors for the materials
+        walls.diffuse_color = walls_color  # Default to soft green color
+        floor.diffuse_color = floor_color  # Default to sober brown color
+        ceiling.diffuse_color = ceiling_color  # Default to white color
 
-        # Set spot lamp cone angle and blend
-        spot.data.spot_size = 1.0  # Set spot angle
-        spot.data.spot_blend = 0.2  # Set spot blend
+        
+        self.box_object.data.materials.append(walls)
+        self.box_object.data.materials.append(floor)
+        self.box_object.data.materials.append(ceiling)
 
-        # Set active camera for rendering
-        char_camera = bpy.data.objects.get('Character_Camera')
-        if char_camera:
-            bpy.context.scene.camera = char_camera
-        else:
-            print("No camera found. Rendering without setting an active camera.")
+        self.box_object.data.polygons[0].material_index = self.box_object.material_slots.find('walls')
+        self.box_object.data.polygons[1].material_index = self.box_object.material_slots.find('walls')
+        self.box_object.data.polygons[2].material_index = self.box_object.material_slots.find('walls')
+        self.box_object.data.polygons[3].material_index = self.box_object.material_slots.find('walls')
+        self.box_object.data.polygons[4].material_index = self.box_object.material_slots.find('floor')
+        self.box_object.data.polygons[5].material_index = self.box_object.material_slots.find('ceiling')
+
+        # Update the mesh to reflect changes
+        self.box_object.data.update()
+
+    def create_light(self, light_type='SUN', color=(1, 1, 1), energy=100):
+        """Create a light source in the scene"""
+        if not self.box_object:
+            raise ValueError("Box object not found. Create the box first.")
+        
+        box_dimensions = self.box_object.dimensions
+        box_location = self.box_object.location
+        
+        light_data = bpy.data.lights.new(name="Character_Light", type=light_type)
+        light_data.color = color
+        light_data.energy = energy
+        light_object = bpy.data.objects.new(name="Character_Light", object_data=light_data)
+        bpy.context.collection.objects.link(light_object)
+
+        # Position the light inside the upper side of the box like a ceiling light
+        light_object.location = (box_location.x, box_location.y, box_location.z - 2)
+
+        # Point the light at the center of the box
+        direction = Vector((box_location.x, box_location.y, box_location.z)) - light_object.location
+        rot_quat = direction.to_track_quat('-Z', 'Y')
+        light_object.rotation_euler = rot_quat.to_euler()
+
+        return light_object
 
 
+    def place_generated_objects(self):
+        for path in object_paths:
+            # Import the .obj file
+            bpy.ops.wm.obj_import(filepath=path)
+            
+            # Get the imported object
+            imported_objects = bpy.context.selected_objects
+            if imported_objects:
+                imported_obj = imported_objects[0]  # Assuming the first selected object is the one imported
+                
+                rand_x = random.uniform(-9, -7)
+                rand_y = random.uniform(-9, 9)
+                # Set the location of the imported object
+                imported_obj.location = (rand_x, rand_y, 1)
+            
     def run(self):
         self.clear_scene()
 
@@ -344,7 +384,10 @@ class AnimationHandler:
         self.organize_nla_sequences(sequence_list)
         self.organize_positions(self.target_armature, sequence_list)
         self.add_audio()
-        self.setup_lighting()
+        self.create_box_around_character()
+        self.set_box_properties()
+        self.create_light()
+        self.place_generated_objects()
 
         char_camera = self.create_cameras()
         #self.camera_follow_character(self.target_armature, char_camera)
@@ -366,6 +409,8 @@ audio_frames = []
 
 character_data = {'name': 'Remy'}
 actions_list = ["Idle"]
+
+object_paths = [str(path) for path in os.listdir(os.getcwd() + '\\mesh_generation\\generated_objects')]
 
 for sequence, data in frame_data.items():
     if sequence.isdigit():

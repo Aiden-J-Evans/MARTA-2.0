@@ -1,30 +1,20 @@
-from openai import OpenAI
+# Load model directly
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
+tokenizer = AutoTokenizer.from_pretrained("microsoft/Phi-3-mini-4k-instruct", trust_remote_code=True)
+model = AutoModelForCausalLM.from_pretrained("microsoft/Phi-3-mini-4k-instruct", trust_remote_code=True)
+input_text = "What is your name?"
 
+# Tokenize input text
+input_ids = tokenizer.encode(input_text, return_tensors="pt")
 
-def ask_gpt(prompt):
-    """
-    Asks gpt-3.5-turbo a question
+# Generate text
+output = model.generate(input_ids, max_length=50, num_return_sequences=1, no_repeat_ngram_size=2, early_stopping=True)
 
-    Args:
-        prompt (str): the input prompt for chat-gpt
+# Decode the generated sequence
+generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
 
-    Returns:
-        Chat-gpt's response
-    """
-    client = OpenAI()
-
-    stream = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-        stream=True,
-    )
-    response = ""
-    for chunk in stream:
-        if chunk.choices[0].delta.content is not None:
-            response += chunk.choices[0].delta.content
-
-    return response
+print(generated_text)
 
 def estimate_sentence_length(sentence):
     """

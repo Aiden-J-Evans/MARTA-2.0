@@ -1,4 +1,3 @@
-import bpy
 from transformers import AutoProcessor, MusicgenForConditionalGeneration
 import os
 # use musicgen-small,medium
