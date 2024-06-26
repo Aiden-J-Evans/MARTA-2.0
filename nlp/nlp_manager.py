@@ -1,5 +1,6 @@
 # Load model directly
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+import torch
 
 
 
@@ -15,17 +16,35 @@ def estimate_sentence_length(sentence):
     """
     return round((len(sentence.split()) / 100) * 60)
 
-def ask_phi(prompt):
-    tokenizer = AutoTokenizer.from_pretrained("microsoft/Phi-3-mini-4k-instruct", trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained("microsoft/Phi-3-mini-4k-instruct", trust_remote_code=True)
-    
-    # Tokenize input text
-    input_ids = tokenizer.encode(prompt, return_tensors="pt")
+def find_possible_objects(story):
+    torch.random.manual_seed(0)
 
-    # Generate text
-    output = model.generate(input_ids, max_length=50, num_return_sequences=1, no_repeat_ngram_size=2, early_stopping=True)
+    model = AutoModelForCausalLM.from_pretrained(
+        "microsoft/Phi-3-mini-4k-instruct", 
+        device_map="cuda", 
+        torch_dtype="auto", 
+        trust_remote_code=True, 
+    )
+    tokenizer = AutoTokenizer.from_pretrained("microsoft/Phi-3-mini-4k-instruct")
 
-    # Decode the generated sequence
-    generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
+    messages = [
+        {"role": "user",
+          "content": "What are some very simple background objects which stand on the ground that would make sense for this story: \"" + story + "\" Return the 1-word objects in a python list."}
+    ]
 
-    print(generated_text)
+    pipe = pipeline(
+        "text-generation",
+        model=model,
+        tokenizer=tokenizer,
+    )
+
+    generation_args = {
+        "max_new_tokens": 500,
+        "return_full_text": False,
+        "temperature": 0.0,
+        "do_sample": False,
+    }
+
+    output = pipe(messages, **generation_args)
+    list_string = output[0]['generated_text'].replace('```python\n', '').replace('\n```', '').strip()
+    return eval(list_string)

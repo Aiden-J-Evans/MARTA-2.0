@@ -5,21 +5,145 @@
             "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\speech0.mp3"
         ],
         "characters": {
-            "remy": {
-                "animation": "walk"
+            "david": {
+                "animation": "idle"
             }
         }
     },
-    "61": {
+    "151": {
         "audio_paths": [
             "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\background1.wav",
             "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\speech1.mp3"
         ],
         "characters": {
-            "remy": {
-                "animation": "dance"
+            "david": {
+                "animation": "name"
             }
         }
     },
-    "end_frame": 211
+    "541": {
+        "audio_paths": [
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\background2.wav",
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\speech2.mp3"
+        ],
+        "characters": {
+            "david": {
+                "animation": "idle"
+            }
+        }
+    },
+    "721": {
+        "audio_paths": [
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\background3.wav",
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\speech3.mp3"
+        ],
+        "characters": {
+            "king": {
+                "animation": "stop"
+            },
+            "saul": {
+                "animation": "idle"
+            }
+        }
+    },
+    "931": {
+        "audio_paths": [
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\background4.wav",
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\speech4.mp3"
+        ],
+        "characters": {
+            "david": {
+                "animation": "’"
+            }
+        }
+    },
+    "1111": {
+        "audio_paths": [
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\background5.wav",
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\speech5.mp3"
+        ],
+        "characters": {
+            "david": {
+                "animation": "go"
+            }
+        }
+    },
+    "1351": {
+        "audio_paths": [
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\background6.wav",
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\speech6.mp3"
+        ],
+        "characters": {
+            "david": {
+                "animation": "ridicule"
+            }
+        }
+    },
+    "1411": {
+        "audio_paths": [
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\background7.wav",
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\speech7.mp3"
+        ],
+        "characters": {
+            "david": {
+                "animation": "idle"
+            }
+        }
+    },
+    "1561": {
+        "audio_paths": [
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\background8.wav",
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\speech8.mp3"
+        ],
+        "characters": {
+            "david": {
+                "animation": "take"
+            }
+        }
+    },
+    "1831": {
+        "audio_paths": [
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\background9.wav",
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\speech9.mp3"
+        ],
+        "characters": {
+            "david": {
+                "animation": "hit"
+            }
+        }
+    },
+    "2071": {
+        "audio_paths": [
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\background10.wav",
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\speech10.mp3"
+        ],
+        "characters": {
+            "david": {
+                "animation": "kill"
+            }
+        }
+    },
+    "2191": {
+        "audio_paths": [
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\background11.wav",
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\speech11.mp3"
+        ],
+        "characters": {
+            "david": {
+                "animation": "run"
+            }
+        }
+    },
+    "2341": {
+        "audio_paths": [
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\background12.wav",
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\speech12.mp3"
+        ],
+        "characters": {
+            "david": {
+                "animation": "idle"
+            }
+        }
+    },
+    "end_frame": 2611
 }

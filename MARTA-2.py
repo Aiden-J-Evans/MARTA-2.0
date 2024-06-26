@@ -1,6 +1,7 @@
 from rendering.start_render import render
 from audio.audio_generation import *
-from nlp.nlp_manager import estimate_sentence_length
+from nlp.nlp_manager import *
+from mesh_generation.generator import *
 import spacy
 import json
 from transformers import pipeline
@@ -23,8 +24,6 @@ for token in doc:
     else:
         current.append(token)
 
-# determines if an animation is needed or not
-classifier = pipeline("zero-shot-classification")
 
 # the threshold (between 0 and 1) which determines whether an action should be preformed
 ACTION_THRESHOLD = 0.75
@@ -35,6 +34,15 @@ timeline = {}
 next_frame = 1
 all_characters = []
 
+# possible object to generate
+#objs = find_possible_objects(prompt)
+
+#for obj in objs:
+    #generate_object(obj)
+
+# determines if an animation is needed or not
+classifier = pipeline("zero-shot-classification")
+
 for i, sentence_tokens in enumerate(sentences):
     # get setence (without period)
     sentence = ' '.join([str(token) for token in sentence_tokens])
@@ -44,15 +52,12 @@ for i, sentence_tokens in enumerate(sentences):
     
     #generate background and speech audio based on the sentence
     background_audio_path = generate_audio(i, sentence, sequence_length)
-    
     tts_audio_path = tts(i, sentence)
-    
     
     # uses a transformer
     action_score = classifier(str(sentence), ["physical action"])["scores"][0]
     actions = [str(token.lemma_) for token in sentence_tokens if token.pos_ == "VERB" and action_score > ACTION_THRESHOLD]
     characters = [str(token) for token in sentence_tokens if token.pos_ == "PROPN" and classifier(str(token), ["person"])["scores"][0] > CHARACTER_THRESHOLD]
-    objects = [str(token) for token in sentence_tokens if token.pos_ == "NOUN" or token.pos_ == "PROPN" and classifier(str(token), ["small physical object"])["scores"][0] > CHARACTER_THRESHOLD]
 
     character_dict = {}
     if len(characters) != 0:
@@ -62,8 +67,6 @@ for i, sentence_tokens in enumerate(sentences):
             else:
                 all_characters.remove(character)
                 all_characters.append(character)
-
-
             if len(actions) != 0 and index < len(actions):
                 character_dict[character.lower()] = {'animation':actions[index]}
             else:
