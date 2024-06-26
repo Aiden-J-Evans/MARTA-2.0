@@ -1,11 +1,12 @@
 from rendering.start_render import render
-from audio.audio_generation import generate_audio
+from audio.audio_generation import *
 from nlp.nlp_manager import estimate_sentence_length
 import spacy
 import json
 from transformers import pipeline
 
 prompt = input("Please enter your story (End with a period): ")
+#voiceover_enabled = input("Would you like a voice over? (Y/n)") == 'Y'
 nlp = spacy.load("en_core_web_sm")
 doc = nlp(prompt)
 
@@ -24,10 +25,12 @@ for token in doc:
 
 # determines if an animation is needed or not
 classifier = pipeline("zero-shot-classification")
+
 # the threshold (between 0 and 1) which determines whether an action should be preformed
 ACTION_THRESHOLD = 0.75
 CHARACTER_THRESHOLD = 0.9
 
+# vars for json
 timeline = {}
 next_frame = 1
 all_characters = []
@@ -36,11 +39,14 @@ for i, sentence_tokens in enumerate(sentences):
     # get setence (without period)
     sentence = ' '.join([str(token) for token in sentence_tokens])
     
+    # estimates sentence length based on an equation
     sequence_length = estimate_sentence_length(sentence)
     
-    #generate audio based on the sentence
+    #generate background and speech audio based on the sentence
+    background_audio_path = generate_audio(i, sentence, sequence_length)
     
-    audio_path = generate_audio(i, sentence, sequence_length)
+    tts_audio_path = tts(i, sentence)
+    
     
     # uses a transformer
     action_score = classifier(str(sentence), ["physical action"])["scores"][0]
@@ -68,8 +74,8 @@ for i, sentence_tokens in enumerate(sentences):
     else:
         character_dict[all_characters[-1].lower()] = {'animation':'idle'}
  
-    # saves the frames by
-    timeline[str(next_frame)] = {'audio_path': audio_path, 'characters': character_dict}
+    # saves the frames
+    timeline[str(next_frame)] = {'audio_paths': [background_audio_path, tts_audio_path], 'characters': character_dict}
     next_frame += sequence_length * 30
    
 timeline['end_frame'] = next_frame

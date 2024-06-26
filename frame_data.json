@@ -1,19 +1,25 @@
 {
     "1": {
-        "audio_path": "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\0.wav",
+        "audio_paths": [
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\background0.wav",
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\speech0.mp3"
+        ],
         "characters": {
             "remy": {
                 "animation": "walk"
             }
         }
     },
-    "211": {
-        "audio_path": "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\1.wav",
+    "61": {
+        "audio_paths": [
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\background1.wav",
+            "C:\\Users\\aiden\\Documents\\TWU 23-24\\Work\\MARTA scripts\\MARTA-2.0\\audio\\generated_audio\\speech1.mp3"
+        ],
         "characters": {
             "remy": {
                 "animation": "dance"
             }
         }
     },
-    "end_frame": 421
+    "end_frame": 211
 }

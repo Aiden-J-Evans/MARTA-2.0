@@ -1,5 +1,6 @@
 from transformers import AutoProcessor, MusicgenForConditionalGeneration
 import os
+from gtts import gTTS
 # use musicgen-small,medium
 
 
@@ -28,9 +29,15 @@ def generate_audio(index, prompt="", length=10):
   import scipy
 
   sampling_rate = model.config.audio_encoder.sampling_rate
-  audio_name = str(index) + ".wav"
+  audio_name = "background" + str(index) + ".wav"
 
   scipy.io.wavfile.write(os.getcwd() + "\\audio\\generated_audio\\" + audio_name, rate=sampling_rate, data=audio_values[0, 0].numpy())
 
   return os.getcwd() + "\\audio\\generated_audio\\" + audio_name
+
+def tts(index, sentence):
+  tts = gTTS(text=sentence, lang='en')
+  path = os.getcwd() + "\\audio\\generated_audio\\speech" + str(index) + ".mp3"
+  tts.save(path)
+  return path
 

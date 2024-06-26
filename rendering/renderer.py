@@ -197,9 +197,10 @@ class AnimationHandler:
         sequence_editor = scene.sequence_editor
 
         # Add audio strips
-        for frame, audio_path in audio_frames:
-            if audio_path is not None:
-                sequence_editor.sequences.new_sound(name=os.path.basename(audio_path), filepath=audio_path, channel=1, frame_start=frame)
+        for frame, audio_paths in audio_frames:
+            if audio_paths is not None:
+                sequence_editor.sequences.new_sound(name=os.path.basename(audio_paths[0]), filepath=audio_paths[0], channel=1, frame_start=frame)
+                sequence_editor.sequences.new_sound(name=os.path.basename(audio_paths[1]), filepath=audio_paths[1], channel=2, frame_start=frame)
 
     def create_cameras(self):
         """Create a camera for following the character"""
@@ -345,7 +346,6 @@ class AnimationHandler:
 
         return light_object
 
-
     def place_generated_objects(self):
         for path in object_paths:
             # Import the .obj file
@@ -414,7 +414,7 @@ object_paths = [str(path) for path in os.listdir(os.getcwd() + '\\mesh_generatio
 
 for sequence, data in frame_data.items():
     if sequence.isdigit():
-        audio_frames.append([int(sequence), data["audio_path"]])
+        audio_frames.append([int(sequence), data["audio_paths"]])
 
         for character, char_data in data['characters'].items():
             print(f'Loading: {character}')
