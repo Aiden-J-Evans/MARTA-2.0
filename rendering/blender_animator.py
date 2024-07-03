@@ -204,19 +204,17 @@ class AnimationHandler:
         """Organize positions for sequences of animations in the NLA Editor."""
         location = Vector((0, 0, 0))
 
-
-        action = armature.animation_data.action
-
         for action_name, frames in action_dict.items():  
             # Setup Initial position
-            offset = self.get_cycle_offset(target_armature, strip.action, strip.frame_end - strip.frame_start)
+            strip = self.get_strip(armature, action_name)
+            offset = self.get_cycle_offset(armature, strip.action, strip.frame_end - strip.frame_start)
             
             end_location = location + offset
             print(f"Starting position: {location}, Offset: {offset}, End location: {end_location}")
             
             # Insert keyframes for start and end locations of the strip
             for frame, loc in [(strip.frame_start, location), (strip.frame_end, location), (strip.frame_end + 1, end_location)]:
-                self.insert_location_keyframe(target_armature, frame, loc)
+                self.insert_location_keyframe(armature, frame, loc)
             location = end_location
     
     def run(self):
