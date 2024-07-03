@@ -1519,8 +1519,8 @@ class AnimationHandler:
 root_path = r"C:\Users\PMLS\Desktop\blender stuff"
 character_data = {'name': 'Boy (age 19 to 25)'} 
 actions_dict = {
-    'Walking': (10, 70),  
-    'Locking Hip Hop Dance': (71, 100), 
+    'Walking': (10, 80),  
+    'Locking Hip Hop Dance': (81, 100), 
     
 }
 
