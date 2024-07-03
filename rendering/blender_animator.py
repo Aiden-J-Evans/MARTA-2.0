@@ -149,7 +149,7 @@ class AnimationHandler:
         
         new_actions_dict = {}
         anim_start = 1
-        location = Vector((0, 0, 0))
+       
         
         # Ensure the armature has animation data
         if not target_armature.animation_data:
@@ -173,18 +173,7 @@ class AnimationHandler:
             strip.frame_end = strip.frame_start + min(original_period, remaining_period)
             new_actions_dict[action_name] = (strip.frame_start, strip.frame_end)
             remaining_period -= original_period
-            anim_start = strip.frame_end + 1
-            
-            # Setup Initial position
-            offset = self.get_cycle_offset(target_armature, strip.action, strip.frame_end - strip.frame_start)
-            
-            end_location = location + offset
-            print(f"Starting position: {location}, Offset: {offset}, End location: {end_location}")
-            
-            # Insert keyframes for start and end locations of the strip
-            for frame, loc in [(strip.frame_start, location), (strip.frame_end, location), (strip.frame_end + 1, end_location)]:
-                self.insert_location_keyframe(target_armature, frame, loc)
-            location = end_location
+            anim_start = strip.frame_end + 1       
             
             i = 0
             while remaining_period > 0:
@@ -206,20 +195,29 @@ class AnimationHandler:
                 print(f"Frame end: {new_strip.frame_end}")
                 remaining_period -= original_period
                 
-                # Update position
-                # Setup Initial position
-                offset = self.get_cycle_offset(target_armature, strip.action, new_strip.frame_end - new_strip.frame_start)
-                end_location = location + offset
-                print(f"Starting position: {location}, Offset: {offset}, End location: {end_location}")
-                
-                # Insert keyframes for start and end locations of the strip
-                for frame, loc in [(new_strip.frame_start, location), (new_strip.frame_end, location), (new_strip.frame_end + 1, end_location)]:
-                    self.insert_location_keyframe(target_armature, frame, loc)
-                location = end_location
                 i += 1
                     
         self.end_frame_anim = anim_start
         return new_actions_dict
+    
+    def organize_positions(self, armature, action_dict):
+        """Organize positions for sequences of animations in the NLA Editor."""
+        location = Vector((0, 0, 0))
+
+
+        action = armature.animation_data.action
+
+        for action_name, frames in action_dict.items():  
+            # Setup Initial position
+            offset = self.get_cycle_offset(target_armature, strip.action, strip.frame_end - strip.frame_start)
+            
+            end_location = location + offset
+            print(f"Starting position: {location}, Offset: {offset}, End location: {end_location}")
+            
+            # Insert keyframes for start and end locations of the strip
+            for frame, loc in [(strip.frame_start, location), (strip.frame_end, location), (strip.frame_end + 1, end_location)]:
+                self.insert_location_keyframe(target_armature, frame, loc)
+            location = end_location
     
     def run(self):
         self.clear_scene()
@@ -244,7 +242,7 @@ class AnimationHandler:
         
         # Organize the sequences and positions
         new_dict = self.organize_nla_sequences(self.target_armature, self.actions_dict)
-#        self.organize_positions(self.target_armature, new_dict)
+        self.organize_positions(self.target_armature, new_dict)
         
         # Adjust scene timeline
         bpy.context.scene.frame_end = int(self.end_frame_anim)
@@ -255,8 +253,8 @@ def main():
     root_path = r"C:\Users\PMLS\Desktop\blender stuff"
     character_data = {'name': 'Boy (age 19 to 25)'} 
     actions_dict = {
-        'Walking': (10, 80),  
-        'Locking Hip Hop Dance': (81, 100), 
+        'Walking': (10, 70),  
+        'Locking Hip Hop Dance': (71, 100), 
         
     }
 
