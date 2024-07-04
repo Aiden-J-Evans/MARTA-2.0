@@ -110,6 +110,7 @@ class AnimationHandler:
     def place_armature_with_action(self, armature, actions_dict):
         # Set the initial location and keyframe
 
+        previous_direction = Vector((0, 1, 0))
         for action_name, data in actions_dict.items():
 
 
@@ -126,6 +127,10 @@ class AnimationHandler:
 
             # Calculate the direction vector from start_location to end_location
             direction = target_offset.normalized()
+            
+            # Use old direction if direction is 0
+            if direction.length == 0: direction = previous_direction
+            previous_direction = direction
 
             # Calculate the cycle offset after the rig has ben rotated
             # Note: Different from normal caclulations because of swapped axes.
@@ -260,6 +265,195 @@ class AnimationHandler:
                 self.insert_location_keyframe(armature, frame, loc)
             location = end_location
     
+
+    def create_cameras(self):
+        """Create a camera for following the character"""
+        char_cam_data = bpy.data.cameras.new(name='Character_Camera')
+        char_camera = bpy.data.objects.new(name='Character_Camera', object_data=char_cam_data)
+        bpy.context.collection.objects.link(char_camera)
+        return char_camera
+
+
+    def camera_follow_character(self, target_armature, camera_char, scene, dpgraph):
+        """Follow a specific bone with the camera."""
+        # I am using hip bone 
+        target_armature = scene.objects.get('target_rig')
+        target_armature = target_armature.evaluated_get(dpgraph)
+        if camera_char and target_armature:
+            # Get the location of the hips bone
+            hips_bone = target_armature.pose.bones.get("mixamorig:Hips")
+            if hips_bone:
+                # Calculate the location of the hips bone in world space
+                hips_location = target_armature.matrix_world @ hips_bone.head
+                
+                # Can adjust the distance through arguments depending upon the situation accordingly  
+                distance_y = 5  # Distance along the Y-axis
+                distance_z = 2  # Height above the hips bone
+                
+                # Calculate camera position
+                camera_location = hips_location + Vector((0, -distance_y, distance_z))
+                
+                # Move the camera to the calculated position
+                camera_char.location = camera_location
+                print(f'Camera location: {hips_bone.head}')
+                
+                # Make the camera look at the hips bone
+                direction = hips_location - camera_char.location
+                rot_quat = direction.to_track_quat('-Z', 'Y')
+                camera_char.rotation_euler = rot_quat.to_euler()
+                
+                # Adjust camera lens to broaden the view
+                camera_char.data.angle = math.radians(70)  # Adjust angle as needed for wider view
+            else:
+                print("Hips bone not found")
+        else:
+            print("Camera or target armature not found")
+
+
+    def frame_change_handler(self, scene, dpgraph):
+        """Frame change handler to follow the character with the camera"""
+        char_camera = scene.objects.get('Character_Camera')
+        self.camera_follow_character(self.target_armature, char_camera, scene, dpgraph)
+        print("Updating camera")
+                
+    def render_animation(self, root_path, sequence_list,output_filename ):
+        """Render the animation to an MP4 file"""
+        output_path = os.path.join(root_path, output_filename)
+        scene = bpy.context.scene
+        scene.render.image_settings.file_format = 'FFMPEG'
+        scene.render.ffmpeg.format = 'MPEG4'
+        scene.render.ffmpeg.codec = 'H264'
+        scene.render.ffmpeg.constant_rate_factor = 'HIGH'
+        scene.render.ffmpeg.ffmpeg_preset = 'GOOD'
+        scene.render.filepath = output_path
+
+        # Set output settings
+        scene.render.resolution_x = 720
+        scene.render.resolution_y = 460
+        scene.render.resolution_percentage = 80
+        scene.frame_start = 1
+        scene.frame_end = self.update_end_frame(sequence_list) 
+
+        # Set the active camera
+        char_camera = bpy.data.objects.get('Character_Camera')
+        if char_camera:
+            bpy.context.scene.camera = char_camera
+        else:
+            print("No camera found. Rendering without setting an active camera.")
+
+        # Render the animation
+        bpy.ops.render.render(animation=True)
+
+    def create_box_around_character(self):
+        """Create a box around the character to absorb light"""
+        Size = 40
+        bpy.ops.mesh.primitive_cube_add(size=Size, location=(0, 0, Size / 2))
+        self.box_object = bpy.context.active_object
+
+    # def set_box_properties(self, walls_color=(0.5, 0.7, 0.5, 1), floor_color=(0.6, 0.4, 0.2, 1), ceiling_color=(1, 1, 1, 1)):
+    #     """Set properties of the box with specific materials and colors"""
+    #     if not self.box_object:
+    #         raise ValueError("Box object not found. Create the box first.")
+
+    #     # Create materials
+    #     walls = bpy.data.materials.new(name='walls')
+    #     floor = bpy.data.materials.new(name='floor')
+    #     ceiling = bpy.data.materials.new(name='ceiling')
+
+    #     # Set the colors for the materials
+    #     walls.diffuse_color = walls_color  # Default to soft green color
+    #     floor.diffuse_color = floor_color  # Default to sober brown color
+    #     ceiling.diffuse_color = ceiling_color  # Default to white color
+
+        
+    #     self.box_object.data.materials.append(walls)
+    #     self.box_object.data.materials.append(floor)
+    #     self.box_object.data.materials.append(ceiling)
+
+    #     self.box_object.data.polygons[0].material_index = self.box_object.material_slots.find('walls')
+    #     self.box_object.data.polygons[1].material_index = self.box_object.material_slots.find('walls')
+    #     self.box_object.data.polygons[2].material_index = self.box_object.material_slots.find('walls')
+    #     self.box_object.data.polygons[3].material_index = self.box_object.material_slots.find('walls')
+    #     self.box_object.data.polygons[4].material_index = self.box_object.material_slots.find('floor')
+    #     self.box_object.data.polygons[5].material_index = self.box_object.material_slots.find('ceiling')
+
+    #     # Update the mesh to reflect changes
+    #     self.box_object.data.update()
+
+
+    def set_box_properties(self, walls_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\textures\forest.jpg", floor_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\textures\ground.jpg", ceiling_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\textures\sky.jpg"):
+        """Set properties of the box with specific textures"""
+        if not self.box_object:
+            raise ValueError("Box object not found. Create the box first.")
+
+        # Create materials
+        walls = bpy.data.materials.new(name='walls') 
+        floor = bpy.data.materials.new(name='floor')
+        ceiling = bpy.data.materials.new(name='ceiling')
+        
+        # Create textures using the images' paths
+        walls.use_nodes=True
+        bsdf1 = walls.node_tree.nodes["Principled BSDF"]
+        wall_tex = walls.node_tree.nodes.new('ShaderNodeTexImage')
+        wall_tex.image = bpy.data.images.load(walls_texture_path)
+
+        floor.use_nodes=True
+        bsdf2 = floor.node_tree.nodes["Principled BSDF"]
+        floor_tex = floor.node_tree.nodes.new('ShaderNodeTexImage')
+        floor_tex.image = bpy.data.images.load(floor_texture_path)
+
+        ceiling.use_nodes=True
+        bsdf3 = ceiling.node_tree.nodes["Principled BSDF"]
+        ceil_tex = ceiling.node_tree.nodes.new('ShaderNodeTexImage')
+        ceil_tex.image = bpy.data.images.load(ceiling_texture_path)
+
+
+        # Connect the textures to the materials
+        walls.node_tree.links.new(bsdf1.inputs['Base Color'], wall_tex.outputs['Color'])
+        floor.node_tree.links.new(bsdf2.inputs['Base Color'], floor_tex.outputs['Color'])
+        ceiling.node_tree.links.new(bsdf3.inputs['Base Color'], ceil_tex.outputs['Color'])
+        
+        self.box_object.data.materials.append(walls)
+        self.box_object.data.materials.append(floor)
+        self.box_object.data.materials.append(ceiling)
+
+        self.box_object.data.polygons[0].material_index = self.box_object.material_slots.find('walls')
+        self.box_object.data.polygons[1].material_index = self.box_object.material_slots.find('walls')
+        self.box_object.data.polygons[2].material_index = self.box_object.material_slots.find('walls')
+        self.box_object.data.polygons[3].material_index = self.box_object.material_slots.find('walls')
+        self.box_object.data.polygons[4].material_index = self.box_object.material_slots.find('floor')
+        self.box_object.data.polygons[5].material_index = self.box_object.material_slots.find('ceiling')
+
+        # Update the mesh to reflect changes
+        self.box_object.data.update()
+
+    def create_light(self, light_type='SUN', color=(1, 1, 1), energy=100):
+        """Create a light source in the scene"""
+        if not self.box_object:
+            raise ValueError("Box object not found. Create the box first.")
+        
+        box_dimensions = self.box_object.dimensions
+        box_location = self.box_object.location
+        
+        light_data = bpy.data.lights.new(name="Character_Light", type=light_type)
+        light_data.color = color
+        light_data.energy = energy
+        light_object = bpy.data.objects.new(name="Character_Light", object_data=light_data)
+        bpy.context.collection.objects.link(light_object)
+
+        # Position the light inside the upper side of the box like a ceiling light
+        light_object.location = (box_location.x, box_location.y, box_location.z - 2)
+
+        # Point the light at the center of the box
+        direction = Vector((box_location.x, box_location.y, box_location.z)) - light_object.location
+        rot_quat = direction.to_track_quat('-Z', 'Y')
+        light_object.rotation_euler = rot_quat.to_euler()
+
+        return light_object
+
+
+
+
     def run(self):
         self.clear_scene()
         character_path = os.path.join(self.root_path, 'characters')
@@ -286,8 +480,21 @@ class AnimationHandler:
         new_dict = self.organize_nla_sequences(self.target_armature, self.actions_dict)
         self.place_armature_with_action(self.target_armature, new_dict)
 
-        #self.organize_positions(self.target_armature, new_dict)
+       # Create camera
+        char_camera = self.create_cameras()
+
+        # Register the frame change handler to follow the character during animation
+        bpy.app.handlers.frame_change_pre.clear()
+        bpy.app.handlers.frame_change_post.clear()
+        bpy.app.handlers.frame_change_post.append(lambda scene, dpgraph: self.frame_change_handler(scene, dpgraph))
         
+        self.create_box_around_character()
+        self.set_box_properties()
+
+        self.create_light(light_type='SUN', color=(1, 1, 1), energy=1000)
+        
+        # self.render_animation(self.root_path, sequence_list, output_filename)
+
         # Adjust scene timeline
         bpy.context.scene.frame_end = int(self.end_frame_anim)
         bpy.context.scene.frame_current = 0
@@ -298,7 +505,7 @@ def main():
     character_data = {'name': 'Boy (age 19 to 25)'} 
     actions_dict = {
         'Walking': [(10, 70), Vector((1,1,0)), Vector((-3,-6,0))] ,
-        'Locking Hip Hop Dance':  [(71, 100), Vector((-3,-6,0)), Vector((0,0,0))] 
+        'Locking Hip Hop Dance':  [(71, 100), Vector((-3,-6,0)), Vector((-3,-6,0))] 
         
     }
 
