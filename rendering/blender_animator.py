@@ -105,15 +105,6 @@ class AnimationHandler:
     def organize_positions(self, armature, action_dict):
         """Organize positions for sequences of animations in the NLA Editor."""
         location = Vector((0, 0, 0))
-
-        # Ensure the armature has animation data
-        if not armature.animation_data:
-            armature.animation_data_create()
-
-        # Ensure the armature has an action to hold keyframes
-        if not armature.animation_data.action:
-            armature.animation_data.action = bpy.data.actions.new(name="TempAction")
-
         action = armature.animation_data.action
 
         for action_name, frames in action_dict.items():  
@@ -139,8 +130,6 @@ class AnimationHandler:
         # Duplicate the action
         new_action = original_action.copy()
         new_action.name = f"{new_action_name}"
-        
-
         return new_action
 
 
@@ -160,26 +149,43 @@ class AnimationHandler:
             target_armature.animation_data.action = bpy.data.actions.new(name="TempAction")
         location_action = target_armature.animation_data.action
 
-        for action_name, frames in actions_dict.items():
-            frame_start = frames[0]
-            frame_end = frames[1]
+        for action_name, data in actions_dict.items():
+            frame_start = data[0][0]
+            frame_end = data[0][1]
             action_name = action_name.lower().replace(" ", "_") + "_rig_action"
             strip = self.get_strip(target_armature, action_name)
             original_period = int(strip.frame_end - strip.frame_start)
             remaining_period = frame_end - frame_start
-            
+            num_repeats = math.ceil(remaining_period / original_period)
+
             # Initialize original strip
             strip.frame_start = frame_start
             strip.frame_end = strip.frame_start + min(original_period, remaining_period)
-            new_actions_dict[action_name] = (strip.frame_start, strip.frame_end)
+            if remaining_period > original_period:
+                start_location=data[1]
+                ending_location=data[1]+((data[2]-data[1])/num_repeats)
+                new_actions_dict[action_name] = [(strip.frame_start, strip.frame_end),start_location ,ending_location ]
+                print(f"action: {action_name}, start location: {start_location}, end location: {ending_location}")
+                start_location=ending_location
+            else:
+                start_location=data[1]
+                ending_location=data[2]
+                new_actions_dict[action_name] = [(strip.frame_start, strip.frame_end),start_location ,ending_location ]
+                print(f"action: {action_name}, start location: {start_location}, end location: {ending_location}")
+            
             remaining_period -= original_period
             anim_start = strip.frame_end + 1       
             
             i = 0
             while remaining_period > 0:
+
                 new_end_frame = min(anim_start + original_period, frame_end)
                 new_action_name = f"{action_name}_{i + 1}"
-                new_actions_dict[new_action_name] = (anim_start, new_end_frame)
+                ending_location=start_location+(data[2]-data[1])/num_repeats
+
+                new_actions_dict[new_action_name] = [(anim_start, new_end_frame), start_location, ending_location]
+                print(f"action: {new_action_name}, start location: {start_location}, end location: {ending_location}")
+                start_location=ending_location
                 
                 # Duplicate the action
                 # NOTE: May not be necessary
@@ -228,9 +234,9 @@ class AnimationHandler:
         animation_path = os.path.join(self.root_path, 'animations')
 
         # Load and process each action
-        for action_name, frames in self.actions_dict.items():
-            start_frame = frames[0]
-            end_frame = frames[1]
+        for action_name, data in self.actions_dict.items():
+            start_frame = data[0][0]
+            end_frame = data[0][1]
             action_fbx_path = os.path.join(animation_path, f"{action_name}.fbx")
             rig_name = action_name.lower().replace(" ", "_") + "_rig"
             action_armature = self.load_rig(action_fbx_path, rig_name)
@@ -251,8 +257,8 @@ def main():
     root_path = r"C:\Users\PMLS\Desktop\blender stuff"
     character_data = {'name': 'Boy (age 19 to 25)'} 
     actions_dict = {
-        'Walking': (10, 70),  
-        'Locking Hip Hop Dance': (71, 100), 
+        'Walking': [(10, 70), Vector((0,0,0)), Vector((1,2,0))] ,
+        'Locking Hip Hop Dance':  [(71, 100), Vector((1,2,0)), Vector((0,0,0))] 
         
     }
 
