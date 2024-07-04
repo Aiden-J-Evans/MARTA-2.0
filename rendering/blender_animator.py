@@ -90,8 +90,8 @@ class AnimationHandler:
             start_pos[channel] = curve.evaluate(0)
             end_pos[channel] = curve.evaluate(end_frame)
             
-        start_pos_world = Vector(start_pos) @ rig.matrix_world
-        end_pos_world = Vector(end_pos) @ rig.matrix_world
+        start_pos_world = Vector(start_pos) @ self.rig_matrix_world
+        end_pos_world = Vector(end_pos) @ self.rig_matrix_world
         offset = [-(end_pos_world[i] - start_pos_world[i]) for i in range(3)]
         
         offset[2] = 0
@@ -101,25 +101,62 @@ class AnimationHandler:
         """Insert a location keyframe for the armature at the specified frame."""
         armature.location = location
         armature.keyframe_insert(data_path="location", frame=frame)
+    
+    def insert_rotation_keyframe(self, armature, frame, direction):
+        """Insert a rotation keyframe for the armature at the specified frame."""
+        armature.rotation_euler = direction.to_track_quat('Z', 'Y').to_euler()
+        armature.keyframe_insert(data_path="rotation_euler", frame=frame)
 
-    def organize_positions(self, armature, action_dict):
-        """Organize positions for sequences of animations in the NLA Editor."""
-        location = Vector((0, 0, 0))
-        action = armature.animation_data.action
+    def place_armature_with_action(self, armature, actions_dict):
+        # Set the initial location and keyframe
 
-        for action_name, frames in action_dict.items():  
-            
-            offset = self.get_cycle_offset(armature, action_name)
-            end_location = location + offset
+        for action_name, data in actions_dict.items():
 
-                
+
             strip = self.get_strip(armature, action_name)
-            
-            # Insert keyframes for start and end locations of the strip
-            for frame, loc in [(strip.frame_start, location), (strip.frame_end, location), (strip.frame_end + 1, end_location)]:
-                self.insert_location_keyframe(armature, frame, loc)
 
-            location = end_location
+            # Get the positional offset of a single cycle with no rotational changes
+            cycle_offset = self.get_cycle_offset(armature, strip.action, strip.frame_end - strip.frame_start)
+            
+            # Determine total desired offset for the cycle
+            start_location=data[1]
+            end_location=data[2]
+            target_offset = end_location - start_location
+            target_offset.z = 0
+
+            # Calculate the direction vector from start_location to end_location
+            direction = target_offset.normalized()
+
+            # Calculate the cycle offset after the rig has ben rotated
+            # Note: Different from normal caclulations because of swapped axes.
+            #       (Rig up is Y, blender up is Z)
+            rotated_cycle_offset = Vector([
+                - cycle_offset.x * direction.y - cycle_offset.y * direction.x,
+                cycle_offset.x * direction.x - cycle_offset.y * direction.y, 
+                0
+            ])
+            
+            # Add the keyframes
+            #   Rotation is constant across the strip
+            #   Location:
+            #      frame 0: start_location
+            #      end_frame: end_location - cycle_offset 
+            #                    so that the rig ends up at the target at the end of the cycle
+            #                    This is because if end_location was used, the rig motion would move it past
+            #                    end_location. By subtracting cycle_offset, the rig ends the cycle at end_location.
+            #      end_frame + 1: end_location (so that it doesn't teleport back when rig stops driving animation)
+            #                                  (likely overwritten by next strip)
+            self.insert_rotation_keyframe(armature, strip.frame_start, direction)
+            self.insert_rotation_keyframe(armature, strip.frame_end, direction)
+            self.insert_location_keyframe(armature, strip.frame_start, start_location)
+            self.insert_location_keyframe(armature, strip.frame_end, end_location - rotated_cycle_offset)
+            self.insert_location_keyframe(armature, strip.frame_end + 1, end_location)
+
+            # Update the scene
+            bpy.context.view_layer.update()
+
+
+
     
     def duplicate_action(self, original_action_name, new_action_name):
         """Duplicate an action and return the new action"""
@@ -230,6 +267,7 @@ class AnimationHandler:
         # Load the main target armature
         target_fbx_path = os.path.join(character_path, f"{self.character_name}.fbx")
         self.target_armature = self.load_rig(target_fbx_path, 'target_rig')
+        self.rig_matrix_world = self.target_armature.matrix_world.copy()
         
         animation_path = os.path.join(self.root_path, 'animations')
 
@@ -246,7 +284,9 @@ class AnimationHandler:
         
         # Organize the sequences and positions
         new_dict = self.organize_nla_sequences(self.target_armature, self.actions_dict)
-        self.organize_positions(self.target_armature, new_dict)
+        self.place_armature_with_action(self.target_armature, new_dict)
+
+        #self.organize_positions(self.target_armature, new_dict)
         
         # Adjust scene timeline
         bpy.context.scene.frame_end = int(self.end_frame_anim)
@@ -257,8 +297,8 @@ def main():
     root_path = r"C:\Users\PMLS\Desktop\blender stuff"
     character_data = {'name': 'Boy (age 19 to 25)'} 
     actions_dict = {
-        'Walking': [(10, 70), Vector((0,0,0)), Vector((1,2,0))] ,
-        'Locking Hip Hop Dance':  [(71, 100), Vector((1,2,0)), Vector((0,0,0))] 
+        'Walking': [(10, 70), Vector((1,1,0)), Vector((-3,-6,0))] ,
+        'Locking Hip Hop Dance':  [(71, 100), Vector((-3,-6,0)), Vector((0,0,0))] 
         
     }
 
