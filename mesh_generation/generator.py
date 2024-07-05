@@ -16,7 +16,7 @@ def generate_object(prompt):
     path = os.getcwd() + '\\mesh_generation\\generated_objects\\' + prompt + '.obj'
 
     mesh_render.save_rendering(path, output)
-
+    
     return path
 
-generate_object('rock')
+generate_object('human')

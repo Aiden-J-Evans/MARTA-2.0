@@ -27,7 +27,7 @@ def initialize():
     if not os.path.exists("momask-codes\\checkpoints"):
         print('done... ensure that you have created "checkpoints" directory with two subdirectories "kit" and "t2m", with their respective zip files inside from https://drive.google.com/file/d/1MNMdUdn5QoO8UW1iwTcZ0QNaLSH4A6G9/view and https://drive.google.com/file/d/1dtKP2xBk-UjG9o16MVfBJDmGNSI56Dch/view')
         
-def create_animation(prompt, length):
+def create_animation(prompt, length=5):
     """Genreates an animation from a given prompt and length
     
     Args:
@@ -41,5 +41,11 @@ def create_animation(prompt, length):
     os.chdir("momask-codes")
     subprocess.call(["python", "gen_t2m.py", "--gpu_id", "0", "--ext", prompt, "--text_prompt", "\""+ prompt +"\"", "--motion_length", str(length*20)], shell=True)
     os.chdir("..")
-    return "momask-codes\\generation\\" + prompt + "\\0\\sample0_repeat0_length" + str(length*20) + ".bvh"
     
+    og_path = os.getcwd() + "\\momask-codes\\generation\\" + prompt + "\\animations\\0\\sample0_repeat0_len" + str(length*20) + ".bvh"
+    if os.path.exists(og_path):
+        new_path = os.getcwd() + "\\rendering\\animations\\" + prompt + ".bvh"
+        os.replace(og_path, new_path)
+        return new_path
+    else:
+        print("help")

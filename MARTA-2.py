@@ -1,7 +1,8 @@
 from rendering.start_render import render
+# will need to change anaconda3\envs\momask\lib\site-packages\transformers\models\musicgen\modeling_musicgen.py", line 2055 & 2057 from concatenate() to cat()
 from audio.audio_generation import *
 from nlp.nlp_manager import *
-from mesh_generation.generator import *
+#from mesh_generation.generator import * (import this when I find a workaround to get meshgpt working, but i highly doubt it)
 from rendering.momask_utils import *
 import spacy
 import json
@@ -69,12 +70,12 @@ for i, sentence_tokens in enumerate(sentences):
                 all_characters.remove(character)
                 all_characters.append(character)
             if len(actions) != 0 and index < len(actions):
-                character_dict[character.lower()] = {'animation':actions[index]}
+                character_dict[character.lower()] = {'animation':create_animation(prompt=actions[index], length=sequence_length)}
             else:
                 character_dict[character.lower()] = {'animation': 'idle'}
             
     elif len(actions) != 0:
-        character_dict[all_characters[-1].lower()] = {'animation':actions[0]}
+        character_dict[all_characters[-1].lower()] = {'animation':create_animation(prompt=actions[0], length=sequence_length)}
     else:
         character_dict[all_characters[-1].lower()] = {'animation':'idle'}
  
