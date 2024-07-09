@@ -4,10 +4,10 @@ import os
 import math
 
 class AnimationHandler:
-    def __init__(self, root_path, character_data, actions_dict):
+    def __init__(self, root_path, characters_data, actions_list):
         self.root_path = root_path
-        self.character_name = character_data['name']
-        self.actions_dict = actions_dict
+        self.characters_data = characters_data
+        self.actions_list = actions_list
         self.target_armature = None
         self.box_object = None
         self.end_frame_anim = None
@@ -117,6 +117,7 @@ class AnimationHandler:
 
 
             strip = self.get_strip(armature, action_name)
+           
 
             # Get the positional offset of a single cycle with no rotational changes
             cycle_offset = self.get_cycle_offset(armature, strip.action, strip.frame_end - strip.frame_start)
@@ -177,7 +178,7 @@ class AnimationHandler:
         return new_action
 
 
-    def organize_nla_sequences(self, target_armature, actions_dict):
+    def organize_nla_sequences(self, target_armature, actions_dict, character_name):
         """Organize sequences of animations in the NLA Editor for the target armature."""
         
         new_actions_dict = {}
@@ -196,7 +197,7 @@ class AnimationHandler:
         for action_name, data in actions_dict.items():
             frame_start = data[0][0]
             frame_end = data[0][1]
-            action_name = action_name.lower().replace(" ", "_") + "_rig_action"
+            action_name = character_name+'_' + action_name.lower().replace(" ", "_") + "_rig_action"
             strip = self.get_strip(target_armature, action_name)
             original_period = int(strip.frame_end - strip.frame_start)
             remaining_period = frame_end - frame_start
@@ -268,9 +269,45 @@ class AnimationHandler:
             location = end_location
     
 
+    def camera_follow_character(self, target_armature, camera_char, scene, dpgraph):
+        """Follow a specific bone with the camera."""
+        # I am using hip bone 
+        
+        target_armature = target_armature.evaluated_get(dpgraph)
+        if camera_char and target_armature:
+            # Get the location of the hips bone
+            hips_bone = target_armature.pose.bones.get("mixamorig:Hips")
+            if hips_bone:
+                # Calculate the location of the hips bone in world space
+                
+                hips_location = target_armature.matrix_world @ hips_bone.head            
+                # Can adjust the distance through arguments depending upon the situation   
+                distance_y = 5  # Distance along the Y-axis
+                distance_z = 2  # Height above the hips bone
+                
+                # Calculate camera position
+                camera_location = hips_location + Vector((0, -distance_y, distance_z))
+                
+                # Move the camera to the calculated position
+                camera_char.location = camera_location
+                print(f'Camera location: {hips_bone.head}')
+                
+                # Make the camera look at the hips bone
+                direction = hips_location - camera_char.location
+                rot_quat = direction.to_track_quat('-Z', 'Y')
+                camera_char.rotation_euler = rot_quat.to_euler()
+                
+                # Adjust camera lens to broaden the view
+                camera_char.data.angle = math.radians(70)  # Adjust angle as needed for wider view
+            else:
+                print("Hips bone not found")
+        else:
+            print("Camera or target armature not found")
+
+
+
     def create_cameras(self):
-        
-        
+         
         head_bone = self.target_armature.pose.bones.get("mixamorig:HeadTop_End")
         head_bone_world_location = self.target_armature.matrix_world @ head_bone.head
         head_height = head_bone_world_location.z
@@ -485,62 +522,73 @@ class AnimationHandler:
 
     def run(self):
         self.clear_scene()
-        self.closest_camera = None
-        character_path = os.path.join(self.root_path, 'characters')
+        for character_data, actions_dict in zip(self.characters_data, self.actions_list):
+            character_name = character_data['name']
+            character_path = os.path.join(self.root_path, 'characters')
 
-        # Load the main target armature
-        target_fbx_path = os.path.join(character_path, f"{self.character_name}.fbx")
-        self.target_armature = self.load_rig(target_fbx_path, 'target_rig')
-        self.rig_matrix_world = self.target_armature.matrix_world.copy()
+            # Load the main target armature
+            target_fbx_path = os.path.join(character_path, f"{character_name}.fbx")
+            self.target_armature = self.load_rig(target_fbx_path, f'{character_name}_rig')
+            self.rig_matrix_world = self.target_armature.matrix_world.copy()
         
-        animation_path = os.path.join(self.root_path, 'animations')
+            animation_path = os.path.join(self.root_path, 'animations')
 
-        # Load and process each action
-        for action_name, data in self.actions_dict.items():
-            start_frame = data[0][0]
-            end_frame = data[0][1]
-            action_fbx_path = os.path.join(animation_path, f"{action_name}.fbx")
-            rig_name = action_name.lower().replace(" ", "_") + "_rig"
-            action_armature = self.load_rig(action_fbx_path, rig_name)
-            action_armature.hide_set(True)
-            self.push_action_to_nla(self.target_armature, f"{rig_name}_action")
-            self.set_nla_strip_properties(self.target_armature, f"{rig_name}_action")
+            # Load and process each action
+            for action_name, data in actions_dict.items():
+                start_frame = data[0][0]
+                end_frame = data[0][1]
+                action_fbx_path = os.path.join(animation_path, f"{action_name}.fbx")
+                rig_name = character_name+'_' + action_name.lower().replace(" ", "_") + "_rig"
+                action_armature = self.load_rig(action_fbx_path, rig_name)
+                action_armature.hide_set(True)
+                self.push_action_to_nla(self.target_armature, f"{rig_name}_action")
+                self.set_nla_strip_properties(self.target_armature, f"{rig_name}_action")
         
-        # Organize the sequences and positions
-        new_dict = self.organize_nla_sequences(self.target_armature, self.actions_dict)
-        self.place_armature_with_action(self.target_armature, new_dict)
+            # Organize the sequences and positions
+            new_dict = self.organize_nla_sequences(self.target_armature, actions_dict, character_name)
+            self.place_armature_with_action(self.target_armature, new_dict)
 
-       # Create camera
+            # Create camera
+            self.create_box_around_character()
+            #self.set_box_properties()
+            self.create_cameras()
+            #self.create_light(light_type='SUN', color=(1, 1, 1), energy=1000)
         
+            # Adjust scene timeline
+            bpy.context.scene.frame_end = int(self.end_frame_anim)
+            bpy.context.scene.frame_current = 0
 
         # Register the frame change handler to follow the character during animation
         bpy.app.handlers.frame_change_pre.clear()
         bpy.app.handlers.frame_change_post.clear()
         bpy.app.handlers.frame_change_post.append(lambda scene, dpgraph: self.frame_change_handler(scene, dpgraph))
         
-        self.create_box_around_character()
-        self.set_box_properties()
-        self.create_cameras()
 
-        self.create_light(light_type='SUN', color=(1, 1, 1), energy=1000)
-        
-        # self.render_animation(self.root_path, sequence_list, output_filename)
-
-        # Adjust scene timeline
-        bpy.context.scene.frame_end = int(self.end_frame_anim)
-        bpy.context.scene.frame_current = 0
         
 def main():
-    # Example
     root_path = r"C:\Users\PMLS\Desktop\blender stuff"
-    character_data = {'name': 'Boy (age 19 to 25)'} 
-    actions_dict = {
-        'Walking': [(10, 100), Vector((1,1,0)), Vector((-3,-6,0))] ,
-        'Locking Hip Hop Dance':  [(100, 150), Vector((-3,-6,0)), Vector((-3,-6,0))] 
-        
-    }
+    characters_data = [
+        {'name': 'Boy'},
+        {'name': 'Girl'}
+    ]
+    actions_list = [
+        {
+            'Walking': [(10, 100), Vector((1, 1, 0)), Vector((-3, -6, 0))],
+            'Idle': [(100, 150), Vector((-3, -6, 0)), Vector((-3, -6, 0))]
+        },
+        {
+            'Walking': [(10, 80), Vector((0, 0, 0)), Vector((4, 10, 0))],
+            'Idle': [(80, 130), Vector((4, 10, 0)), Vector((4, 10, 0))]
+        }
+    ]
 
-    animation_handler = AnimationHandler(root_path, character_data, actions_dict)
-    animation_handler.run()       
+    animation_handler = AnimationHandler(root_path, characters_data, actions_list)
+    animation_handler.run()
+ 
 
 main()
+
+
+
+
+
