@@ -267,13 +267,51 @@ class AnimationHandler:
                 self.insert_location_keyframe(armature, frame, loc)
             location = end_location
     
-    def create_cameras(self, character_name):
+    def create_cameras(self, character_name, actions_dict):
+        #setting the position as well 
         """Create a camera for following the character"""
         char_cam_data = bpy.data.cameras.new(name=f'{character_name}_camera')
         char_camera = bpy.data.objects.new(name=f'{character_name}_camera', object_data=char_cam_data)
         bpy.context.collection.objects.link(char_camera)
         camera_dict={'name': f'{character_name}_camera', 'camera': char_camera, 'char_name':character_name}
         self.char_cameras.append(camera_dict)
+
+        for action_name, data in actions_dict.items():
+            start_location=data[1]
+            end_location=data[2]
+            direction = (end_location - start_location).normalized()
+            camera_direction_vector = direction 
+            break
+
+        direction_euler = camera_direction_vector.to_track_quat('Z', 'Y').to_euler()
+        char_camera.rotation_euler = direction_euler
+
+        hips_bone = self.target_armature.pose.bones.get("mixamorig:Hips")
+        if hips_bone:
+
+             # Calculate the location of the hips bone in world space
+            hips_location = self.target_armature.matrix_world @ hips_bone.head
+                    
+            # Can adjust the distance through arguments depending upon the situation   
+            distance_y = 3  # Distance along the Y-axis
+            distance_z = 0  # Height above the hips bone
+            char_camera.data.angle = math.radians(70)
+
+            rotated_offset = camera_direction_vector * distance_y
+            rotated_offset.z = distance_z
+
+            camera_location = hips_location + rotated_offset
+                    
+            # Move the camera to the calculated position
+            char_camera.location = camera_location
+
+            #parenting
+            # parent_obj=self.target_armature
+            # child_obj=char_camera
+
+            # child_obj.parent = parent_obj
+            # child_obj.matrix_parent_inverse = parent_obj.matrix_world.inverted()
+
 
         return char_camera
 
@@ -286,24 +324,25 @@ class AnimationHandler:
             camera_char=camera_data['camera']
             target_armature = scene.objects.get(f'{character_name}_rig')
             target_armature = target_armature.evaluated_get(dpgraph)
-            print(camera_char)
+
             if camera_char and target_armature:
                 # Get the location of the hips bone
                 hips_bone = target_armature.pose.bones.get("mixamorig:Hips")
                 if hips_bone:
+
                     # Calculate the location of the hips bone in world space
                     hips_location = target_armature.matrix_world @ hips_bone.head
                     
                     # Can adjust the distance through arguments depending upon the situation accordingly  
                     distance_y = 5  # Distance along the Y-axis
                     distance_z = 2  # Height above the hips bone
-                    
+
                     # Calculate camera position
                     camera_location = hips_location + Vector((0, -distance_y, distance_z))
                     
                     # Move the camera to the calculated position
                     camera_char.location = camera_location
-                    print(f'Camera location: {hips_bone.head}')
+                    
                     
                     # Make the camera look at the hips bone
                     direction = hips_location - camera_char.location
@@ -320,7 +359,7 @@ class AnimationHandler:
 
     def frame_change_handler(self, scene, dpgraph):
         """Frame change handler to follow the character with the camera"""
-        self.camera_follow_character(scene, dpgraph)
+        #self.camera_follow_character(scene, dpgraph)
         print("Updating camera")
                 
 
@@ -572,7 +611,7 @@ class AnimationHandler:
             self.place_armature_with_action(self.target_armature, new_dict)
             
             #self.set_box_properties()
-            self.create_cameras(character_name)
+            self.create_cameras(character_name, actions_dict)
         
             #self.create_light(light_type='SUN', color=(1, 1, 1), energy=1000)
 
