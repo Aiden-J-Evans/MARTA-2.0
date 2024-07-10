@@ -12,6 +12,7 @@ class AnimationHandler:
         self.box_object = None
         self.end_frame_anim = None
         self.cameras=None
+        self.char_cameras=[]
 
     def clear_scene(self):
         """Delete all objects from the scene"""
@@ -163,8 +164,6 @@ class AnimationHandler:
             # Update the scene
             bpy.context.view_layer.update()
 
-
-
     
     def duplicate_action(self, original_action_name, new_action_name):
         """Duplicate an action and return the new action"""
@@ -268,45 +267,65 @@ class AnimationHandler:
                 self.insert_location_keyframe(armature, frame, loc)
             location = end_location
     
+    def create_cameras(self, character_name):
+        """Create a camera for following the character"""
+        char_cam_data = bpy.data.cameras.new(name=f'{character_name}_camera')
+        char_camera = bpy.data.objects.new(name=f'{character_name}_camera', object_data=char_cam_data)
+        bpy.context.collection.objects.link(char_camera)
+        camera_dict={'name': f'{character_name}_camera', 'camera': char_camera, 'char_name':character_name}
+        self.char_cameras.append(camera_dict)
 
-    def camera_follow_character(self, target_armature, camera_char, scene, dpgraph):
-        """Follow a specific bone with the camera."""
-        # I am using hip bone 
-        
-        target_armature = target_armature.evaluated_get(dpgraph)
-        if camera_char and target_armature:
-            # Get the location of the hips bone
-            hips_bone = target_armature.pose.bones.get("mixamorig:Hips")
-            if hips_bone:
-                # Calculate the location of the hips bone in world space
-                
-                hips_location = target_armature.matrix_world @ hips_bone.head            
-                # Can adjust the distance through arguments depending upon the situation   
-                distance_y = 5  # Distance along the Y-axis
-                distance_z = 2  # Height above the hips bone
-                
-                # Calculate camera position
-                camera_location = hips_location + Vector((0, -distance_y, distance_z))
-                
-                # Move the camera to the calculated position
-                camera_char.location = camera_location
-                print(f'Camera location: {hips_bone.head}')
-                
-                # Make the camera look at the hips bone
-                direction = hips_location - camera_char.location
-                rot_quat = direction.to_track_quat('-Z', 'Y')
-                camera_char.rotation_euler = rot_quat.to_euler()
-                
-                # Adjust camera lens to broaden the view
-                camera_char.data.angle = math.radians(70)  # Adjust angle as needed for wider view
+        return char_camera
+
+
+    def camera_follow_character(self, scene, dpgraph):
+        """Follow hip bone with the camera.""" 
+
+        for camera_data in self.char_cameras:
+            character_name=camera_data['char_name']
+            camera_char=camera_data['camera']
+            target_armature = scene.objects.get(f'{character_name}_rig')
+            target_armature = target_armature.evaluated_get(dpgraph)
+            print(camera_char)
+            if camera_char and target_armature:
+                # Get the location of the hips bone
+                hips_bone = target_armature.pose.bones.get("mixamorig:Hips")
+                if hips_bone:
+                    # Calculate the location of the hips bone in world space
+                    hips_location = target_armature.matrix_world @ hips_bone.head
+                    
+                    # Can adjust the distance through arguments depending upon the situation accordingly  
+                    distance_y = 5  # Distance along the Y-axis
+                    distance_z = 2  # Height above the hips bone
+                    
+                    # Calculate camera position
+                    camera_location = hips_location + Vector((0, -distance_y, distance_z))
+                    
+                    # Move the camera to the calculated position
+                    camera_char.location = camera_location
+                    print(f'Camera location: {hips_bone.head}')
+                    
+                    # Make the camera look at the hips bone
+                    direction = hips_location - camera_char.location
+                    rot_quat = direction.to_track_quat('-Z', 'Y')
+                    camera_char.rotation_euler = rot_quat.to_euler()
+                    
+                    # Adjust camera lens to broaden the view
+                    camera_char.data.angle = math.radians(70)  # Adjust angle as needed for wider view
+                else:
+                    print("Hips bone not found")
             else:
-                print("Hips bone not found")
-        else:
-            print("Camera or target armature not found")
+                print("Camera or target armature not found")
 
 
+    def frame_change_handler(self, scene, dpgraph):
+        """Frame change handler to follow the character with the camera"""
+        self.camera_follow_character(scene, dpgraph)
+        print("Updating camera")
+                
 
-    def create_cameras(self):
+
+    def create_cameras1(self):
          
         head_bone = self.target_armature.pose.bones.get("mixamorig:HeadTop_End")
         head_bone_world_location = self.target_armature.matrix_world @ head_bone.head
@@ -377,12 +396,15 @@ class AnimationHandler:
 
 
 
-    def frame_change_handler(self, scene, dpgraph):
-        """Frame change handler to follow the character with the camera"""
-        char_camera = scene.objects.get('Character_Camera')
-        self.update_closest_camera_rotation()
-        print("Updating camera")
-                
+    # def frame_change_handler(self, scene, dpgraph, character_name):
+    #     """Frame change handler to follow the character with the camera"""
+        
+    #     #self.update_closest_camera_rotation()
+    #     self.camera_follow_character(dpgraph, scene, character_name)
+        
+    #     print("Updating camera")
+
+ 
     def render_animation(self, root_path, sequence_list,output_filename ):
         """Render the animation to an MP4 file"""
         output_path = os.path.join(root_path, output_filename)
@@ -411,7 +433,7 @@ class AnimationHandler:
         # Render the animation
         bpy.ops.render.render(animation=True)
 
-    def create_box_around_character(self, Size=40):
+    def create_box(self, Size=40):
         """Create a box around the character to absorb light"""
         bpy.ops.mesh.primitive_cube_add(size=Size, location=(0, 0, Size / 2))
         self.box_object = bpy.context.active_object
@@ -524,6 +546,7 @@ class AnimationHandler:
         self.clear_scene()
         for character_data, actions_dict in zip(self.characters_data, self.actions_list):
             character_name = character_data['name']
+            self.character_name=character_name
             character_path = os.path.join(self.root_path, 'characters')
 
             # Load the main target armature
@@ -547,21 +570,22 @@ class AnimationHandler:
             # Organize the sequences and positions
             new_dict = self.organize_nla_sequences(self.target_armature, actions_dict, character_name)
             self.place_armature_with_action(self.target_armature, new_dict)
-
-            # Create camera
-            self.create_box_around_character()
+            
             #self.set_box_properties()
-            self.create_cameras()
-            #self.create_light(light_type='SUN', color=(1, 1, 1), energy=1000)
+            self.create_cameras(character_name)
         
-            # Adjust scene timeline
-            bpy.context.scene.frame_end = int(self.end_frame_anim)
-            bpy.context.scene.frame_current = 0
+            #self.create_light(light_type='SUN', color=(1, 1, 1), energy=1000)
+
+
 
         # Register the frame change handler to follow the character during animation
+        self.create_box()
         bpy.app.handlers.frame_change_pre.clear()
         bpy.app.handlers.frame_change_post.clear()
         bpy.app.handlers.frame_change_post.append(lambda scene, dpgraph: self.frame_change_handler(scene, dpgraph))
+        bpy.context.scene.frame_end = int(self.end_frame_anim)
+        bpy.context.scene.frame_current = 0
+
         
 
         
