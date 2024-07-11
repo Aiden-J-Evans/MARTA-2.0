@@ -166,6 +166,12 @@ class AnimationHandler:
             # Update the scene
             bpy.context.view_layer.update()
 
+            action = self.target_armature.animation_data.action
+            for curve in action.fcurves:
+                for key in curve.keyframe_points:        
+                    key.interpolation='LINEAR'
+
+
     
     def duplicate_action(self, original_action_name, new_action_name):
         """Duplicate an action and return the new action"""
@@ -642,7 +648,7 @@ class AnimationHandler:
             # Organize the sequences and positions
             new_dict = self.organize_nla_sequences(self.target_armature, actions_dict, character_name)
             self.place_armature_with_action(self.target_armature, new_dict)
-            
+ 
             #self.set_box_properties()
             bpy.context.scene.frame_current = 0
             bpy.context.view_layer.update()
