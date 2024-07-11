@@ -11,9 +11,10 @@ class AnimationHandler:
         self.target_armature = None
         self.box_object = None
         self.end_frame_anim = None
-        self.cameras=None
+        self.scene_cameras=[]
         self.char_cameras=[]
         self.smoothing_factor = 0.2
+        self.closest_camera=None
 
     def clear_scene(self):
         """Delete all objects from the scene"""
@@ -339,48 +340,101 @@ class AnimationHandler:
     def frame_change_handler(self, scene, dpgraph):
         """Frame change handler to follow the character with the camera"""
         self.camera_follow_character(scene, dpgraph)
+        current_frame = bpy.context.scene.frame_current
+        active_camera = None
+        active_character_count = 0
+
+        for character_data, actions in zip(self.characters_data, self.actions_list):
+            character_name = character_data['name']
+        
+        # Check if any action matches the current frame for the character
+    
+            for action_name, data in actions.items():
+                start_frame = data[0][0]
+                end_frame = data[0][1]
+                print('action_name in frame change', action_name )
+                
+                if start_frame <= current_frame and current_frame <= end_frame:
+                    if action_name != 'Idle': 
+                        active_camera = f"{character_name}"    
+                        active_character_count += 1
+                    break
+
+        if active_character_count != 1:
+            # Use scene camera
+            self.update_closest_camera_rotation()
+        else:
+            char_camera=bpy.data.objects.get(f'{active_camera}_camera')
+            marker = bpy.context.scene.timeline_markers.new(name=char_camera.name, frame=current_frame)
+            marker.camera = char_camera
+        
         print("Updating camera")
                 
 
 
-    def create_cameras1(self):
-         
-        head_bone = self.target_armature.pose.bones.get("mixamorig:HeadTop_End")
-        head_bone_world_location = self.target_armature.matrix_world @ head_bone.head
-        head_height = head_bone_world_location.z
-        
-        hip_bone = self.target_armature.pose.bones.get("mixamorig:Hips")
-        hip_bone_world_location = self.target_armature.matrix_world @ hip_bone.head
+    def create_scene_cameras(self):
+        max_height=0
+        avg_hip_bone=Vector((0,0,0))
+        avg_head_bone_world_location=Vector((0,0,0))
+        n=0
 
+        for character in self.characters_data:
+            character_name=character['name']
+            armature=bpy.data.objects.get(f'{character_name}_rig')
+            head_bone = self.target_armature.pose.bones.get("mixamorig:HeadTop_End")
+            head_bone_world_location = self.target_armature.matrix_world @ head_bone.head
+            avg_head_bone_world_location+=head_bone_world_location
+            head_height = head_bone_world_location.z
+            
+            if head_height>max_height:
+                max_height=head_height
 
+            hip_bone = armature.pose.bones.get("mixamorig:Hips")
+            hip_bone_world_location = armature.matrix_world @ hip_bone.head
+            avg_hip_bone+=hip_bone_world_location
+            n+=1
+
+        avg_hip_bone=avg_hip_bone/n
+        avg_head_bone_world_location=avg_head_bone_world_location/n
         vertices_world = [self.box_object.matrix_world @ v.co for v in self.box_object.data.vertices]
-        cameras = []
-
+    
         j=0
         for i in [0,2,4,6]:
             cam_data = bpy.data.cameras.new(name=f'camera_{j}')
             cam_object = bpy.data.objects.new(name=f'camera_{j}', object_data=cam_data)
             cam_object.location = vertices_world[i]
-            cam_object.location.z=head_height+1
+            cam_object.location.z=max_height+1
             bpy.context.collection.objects.link(cam_object)
-            direction = head_bone_world_location - cam_object.location
+            direction = avg_hip_bone - cam_object.location
             rot_quat = direction.to_track_quat('-Z', 'Y')
             cam_object.rotation_euler = rot_quat.to_euler()
             j+=1
-            cameras.append(cam_object)
-        self.cameras = cameras
+            self.scene_cameras.append(cam_object)
+    
             
     def update_closest_camera_rotation(self):
-        head_bone = self.target_armature.pose.bones.get("mixamorig:HeadTop_End")
-        head_bone_world_location = self.target_armature.matrix_world @ head_bone.head
+        avg_hip_bone=Vector((0,0,0))
+        avg_head_bone_world_location=Vector((0,0,0))
+        n=0
+        for character in self.characters_data:
+            character_name=character['name']
+            armature=bpy.data.objects.get(f'{character_name}_rig')
+            head_bone = armature.pose.bones.get("mixamorig:HeadTop_End")
+            head_bone_world_location = armature.matrix_world @ head_bone.head
+            hip_bone = self.target_armature.pose.bones.get("mixamorig:Hips")
+            hip_bone_world_location = armature.matrix_world @ hip_bone.head
+            avg_head_bone_world_location+=head_bone_world_location
+            avg_hip_bone+=hip_bone_world_location
+            n+=1
         
-        hip_bone = self.target_armature.pose.bones.get("mixamorig:Hips")
+        avg_hip_bone=avg_hip_bone/n
+        avg_head_bone_world_location=avg_head_bone_world_location/n
         # Calculate distances to the hip bone and find the closest camera
         closest_camera = None
         closest_distance = float('inf')  # Initializing to infinity for comparison
 
-        for i, cam in enumerate(self.cameras):
-            distance = ((self.target_armature.matrix_world @ hip_bone.head) - cam.location).length
+        for i, cam in enumerate(self.scene_cameras):
+            distance = ((avg_hip_bone) - cam.location).length
             print(f"Camera {i}: {distance}")
             if distance < closest_distance:
                 closest_distance = distance
@@ -399,7 +453,7 @@ class AnimationHandler:
                 marker.camera = closest_camera
 
                 # Rotate the closest camera to face the head bone
-                direction = head_bone_world_location - closest_camera.location
+                direction = avg_head_bone_world_location - closest_camera.location
                 rot_quat = direction.to_track_quat('-Z', 'Y')
                 closest_camera.rotation_euler = rot_quat.to_euler()
 
@@ -408,7 +462,7 @@ class AnimationHandler:
                 self.closest_camera = closest_camera
             elif closest_camera == self.closest_camera:
                 # If the closest camera hasn't changed, still update its rotation
-                direction = head_bone_world_location - closest_camera.location
+                direction = avg_head_bone_world_location - closest_camera.location
                 rot_quat = direction.to_track_quat('-Z', 'Y')
                 closest_camera.rotation_euler = rot_quat.to_euler()
 
@@ -598,6 +652,7 @@ class AnimationHandler:
 
         # Register the frame change handler to follow the character during animation
         self.create_box()
+        self.create_scene_cameras()
         bpy.app.handlers.frame_change_pre.clear()
         bpy.app.handlers.frame_change_post.clear()
         bpy.app.handlers.frame_change_post.append(lambda scene, dpgraph: self.frame_change_handler(scene, dpgraph))
@@ -619,7 +674,7 @@ def main():
             'Walking': [(10, 40), Vector((1, 1, 0)), Vector((-3, -6, 0))]
         },
         {
-            'Walking': [(10, 40), Vector((0, 0, 0)), Vector((4, 10, 0))]
+            'Idle': [(10, 40), Vector((0, 0, 0)), Vector((0, 0, 0))]
         }
     ]
 
