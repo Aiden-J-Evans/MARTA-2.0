@@ -4,6 +4,7 @@ from audio.audio_generation import *
 from nlp.nlp_manager import *
 #from mesh_generation.generator import * (import this when I find a workaround to get meshgpt working, but i highly doubt it)
 from rendering.momask_utils import *
+from texture_generation.stable import generate_image
 import spacy
 import json
 from transformers import pipeline
