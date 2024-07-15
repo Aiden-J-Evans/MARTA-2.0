@@ -13,7 +13,8 @@ Further research done on the MARTA project.
 
 ### Environment
 
-Credit to [@makeinufilm]https://medium.com/@makeinufilm for the super helpful [tutorial]https://medium.com/@makeinufilm/notes-on-how-to-set-up-the-momask-environment-and-how-to-use-blenderaddon-6563f1abdbfa partly used here
+Credit to [@makeinufilm](https://medium.com/@makeinufilm) for the super helpful [tutorial](https://medium.com/@makeinufilm/notes-on-how-to-set-up-the-momask-environment-and-how-to-use-blenderaddon-6563f1abdbfa) partly used here.\
+We will be using the incredible work done at the University of Alberta to generate animation. All credit for creating animations goes to the contributers of [Momask](https://ericguo5513.github.io/momask/).
 
 > Run the following commands in powershell
 ``` 
@@ -24,8 +25,8 @@ or
 pip install git+https://github.com/EricGuo5513/momask-codes.git
 ```
 Create and navigate to `momask-codes/checkpoints` then create two folders, `kit` and `t2m`.\
-- Download [KIT-ML Dataset]https://drive.google.com/file/d/1MNMdUdn5QoO8UW1iwTcZ0QNaLSH4A6G9/view and extract to `momask-codes/checkpoints/kit`.\
-- Download [HumanML3D Dataset]https://drive.google.com/file/d/1MNMdUdn5QoO8UW1iwTcZ0QNaLSH4A6G9/view and extract to `momask-codes/checkpoints/t2m`.
+- Download [KIT-ML Dataset](https://drive.google.com/file/d/1MNMdUdn5QoO8UW1iwTcZ0QNaLSH4A6G9/view) and extract to `momask-codes/checkpoints/kit`.\
+- Download [HumanML3D Dataset](https://drive.google.com/file/d/1MNMdUdn5QoO8UW1iwTcZ0QNaLSH4A6G9/view) and extract to `momask-codes/checkpoints/t2m`.
 
 ![Folder Organization Structure](readme_assets/Momask%20Example%20Display.png)
 
