@@ -17,6 +17,15 @@ def estimate_sentence_length(sentence):
     return round((len(sentence.split()) / 100) * 60)
 
 def find_possible_objects(story):
+    """
+    Uses Microsoft Phi to decide acceptable objects to be generated for the story.
+
+    Args:
+        story (str): the entire story whose background objects will be interpreted
+
+    Returns:
+        A python list of the objects.
+    """
     torch.random.manual_seed(0)
 
     model = AutoModelForCausalLM.from_pretrained(

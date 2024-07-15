@@ -17,7 +17,7 @@ class AnimationHandler:
         """Delete all objects from the scene"""
         if bpy.context.active_object and bpy.context.active_object.mode == 'EDIT':
             bpy.ops.object.editmode_toggle()
-            
+            c
         for obj in bpy.data.objects:
             obj.hide_set(False)
             obj.hide_select = False
