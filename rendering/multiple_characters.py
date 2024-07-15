@@ -663,6 +663,7 @@ class AnimationHandler:
         bpy.app.handlers.frame_change_post.clear()
         bpy.app.handlers.frame_change_post.append(lambda scene, dpgraph: self.frame_change_handler(scene, dpgraph))
         bpy.context.scene.frame_end = int(self.end_frame_anim)
+       
         bpy.context.scene.frame_current = 0
 
         
