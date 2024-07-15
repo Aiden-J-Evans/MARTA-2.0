@@ -49,3 +49,5 @@ def create_animation(prompt, length=5):
         return new_path
     else:
         print("help")
+
+create_animation("dancing in a single spot")

@@ -2,27 +2,8 @@
 Further research done on the MARTA project.
 
 ## Set-up
-```
-git clone https://github.com/EricGuo5513/momask-codes.git
-cd momask-codes
-conda create -n momask python=3.8
-conda activate momask
-conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
-```
-find momask-codes/requirements.txt and change matplotlib==3.1.3 to 3.4.0
-```
-pip install -r requirements.txt
-conda install transformers 
-conda install spacy
-```
 
-## to do
-[] check transformers=3.1.0 compatibility with project so no manual changes need to be done to the package
-[] add logic that clears files from previous runs
-
-
-## Set up
-
+### Pre-reqs
 1. download anaconda
 2. open anaconda prompt
 3. conda init powershell
@@ -30,7 +11,11 @@ conda install spacy
 5. ensure you have navigated to MARTA-2.0 for your cwd
 6. ensure you have git installed
 
-## run the following commands in powershell
+### Environment
+
+Credit to [@makeinufilm]https://medium.com/@makeinufilm for the super helpful [tutorial]https://medium.com/@makeinufilm/notes-on-how-to-set-up-the-momask-environment-and-how-to-use-blenderaddon-6563f1abdbfa partly used here
+
+> Run the following commands in powershell
 ``` 
 git clone https://github.com/EricGuo5513/momask-codes.git
 ```
@@ -38,12 +23,23 @@ or
 ```
 pip install git+https://github.com/EricGuo5513/momask-codes.git
 ```
-then navigate to the requirements.txt file in momask-codes and change matplotlib=3.1.3 to =3.4.2
+Create and navigate to `momask-codes/checkpoints` then create two folders, `kit` and `t2m`.\
+- Download [KIT-ML Dataset]https://drive.google.com/file/d/1MNMdUdn5QoO8UW1iwTcZ0QNaLSH4A6G9/view and extract to `momask-codes/checkpoints/kit`.\
+- Download [HumanML3D Dataset]https://drive.google.com/file/d/1MNMdUdn5QoO8UW1iwTcZ0QNaLSH4A6G9/view and extract to `momask-codes/checkpoints/t2m`.
+
+![Folder Organization Structure](readme_assets/Momask%20Example%20Display.png)
+
 ```
 conda create -n momask python=3.8
 conda activate momask
 conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
-pip install -r momask-codes/requirements.txt
-conda install spacy
-conda install transformers
 ```
+Navigate momask-codes/requirements.txt and change `matplotlib==3.1.3` to `matplotlib==3.4.0`. This is the a version of matplotlib that covers all aspects of the project.
+```
+pip install -r momask-codes/requirements.txt
+conda install transformers spacy diffusers
+```
+
+## to do / improvements
+[] check transformers=3.1.0 compatibility with project so no manual changes need to be done to the package (this would be for object generation)
+[] add logic that clears files from previous runs
