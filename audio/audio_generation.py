@@ -36,6 +36,16 @@ def generate_audio(index, prompt="", length=10):
   return os.getcwd() + "\\audio\\generated_audio\\" + audio_name
 
 def tts(index, sentence):
+  """
+  Generates an audio clip narrating the given sentence.
+
+  Args:
+    index (int): the index of the sentence in the story (used for saving location)
+    sentence (str): the given sentence to be narrated
+
+  Returns:
+    The path to the generated audio.
+  """
   tts = gTTS(text=sentence, lang='en')
   path = os.getcwd() + "\\audio\\generated_audio\\speech" + str(index) + ".mp3"
   tts.save(path)
