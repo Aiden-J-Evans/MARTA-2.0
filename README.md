@@ -34,10 +34,11 @@ conda create -n momask python=3.8
 conda activate momask
 conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
 ```
-Navigate momask-codes/requirements.txt and change `matplotlib==3.1.3` to `matplotlib==3.4.0`. This is the a version of matplotlib that covers all aspects of the project.
+Navigate to momask-codes/requirements.txt and change `matplotlib==3.1.3` to `matplotlib==3.4.0`. This is the a version of matplotlib that covers all aspects of the project.
 ```
 pip install -r momask-codes/requirements.txt
 conda install transformers spacy diffusers
+conda install -c conda-forge ffmpeg=4.3.0
 ```
 
 ## to do / improvements
