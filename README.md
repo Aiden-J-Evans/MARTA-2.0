@@ -11,7 +11,7 @@ Further research done on the MARTA project.
 5. ensure you have navigated to MARTA-2.0 for your cwd
 6. ensure you have git installed
 
-# run the following commands in powershell
+## run the following commands in powershell
 ``` 
 git clone https://github.com/EricGuo5513/momask-codes.git
 ```
