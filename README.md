@@ -4,12 +4,13 @@ Further research done on the MARTA project.
 
 ## Set up
 
-download anaconda
-open anaconda prompt
-conda init powershell
-open vscode
-ensure you have navigated to MARTA-2.0 for your cwd
-ensure you have git installed
+1. download anaconda
+2. open anaconda prompt
+3. conda init powershell
+4. open vscode
+5. ensure you have navigated to MARTA-2.0 for your cwd
+6. ensure you have git installed
+
 # run the following commands in powershell
 ``` 
 git clone https://github.com/EricGuo5513/momask-codes.git
