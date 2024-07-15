@@ -4,7 +4,7 @@ import os
 import math
 
 class AnimationHandler:
-    def __init__(self, root_path, characters_data, actions_list):
+    def __init__(self, root_path, characters_data, actions_list,textures):
         self.root_path = root_path
         self.characters_data = characters_data
         self.actions_list = actions_list
@@ -15,6 +15,8 @@ class AnimationHandler:
         self.char_cameras=[]
         self.smoothing_factor = 0.2
         self.closest_camera=None
+        self.textures=textures
+        
 
     def clear_scene(self):
         """Delete all objects from the scene"""
@@ -547,8 +549,12 @@ class AnimationHandler:
     #     self.box_object.data.update()
 
 
-    def set_box_properties(self, walls_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\textures\forest.jpg", floor_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\textures\ground.jpg", ceiling_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\textures\sky.jpg"):
-        """Set properties of the box with specific textures"""
+    def set_box_properties(self, walls_texture_path, floor_texture_path, ceiling_texture_path,
+                        walls_texture_coords='UV', floor_texture_coords='UV', ceiling_texture_coords='UV',
+                        walls_mapping_scale=(8, 8, 8), floor_mapping_scale=(8, 8, 8), ceiling_mapping_scale=(8, 8, 8),
+                        walls_mapping_rotation=(0, 0, 0), floor_mapping_rotation=(0, 0, 0), ceiling_mapping_rotation=(0, 0, 0),
+                        walls_mapping_translation=(0, 0, 0), floor_mapping_translation=(0, 0, 0), ceiling_mapping_translation=(0, 0, 0)):
+        """Set properties of the box with specific textures and mapping settings"""
         if not self.box_object:
             raise ValueError("Box object not found. Create the box first.")
 
@@ -556,33 +562,93 @@ class AnimationHandler:
         walls = bpy.data.materials.new(name='walls') 
         floor = bpy.data.materials.new(name='floor')
         ceiling = bpy.data.materials.new(name='ceiling')
-        
+
         # Create textures using the images' paths
-        walls.use_nodes=True
+        walls.use_nodes = True
         bsdf1 = walls.node_tree.nodes["Principled BSDF"]
         wall_tex = walls.node_tree.nodes.new('ShaderNodeTexImage')
         wall_tex.image = bpy.data.images.load(walls_texture_path)
 
-        floor.use_nodes=True
+        floor.use_nodes = True
         bsdf2 = floor.node_tree.nodes["Principled BSDF"]
         floor_tex = floor.node_tree.nodes.new('ShaderNodeTexImage')
         floor_tex.image = bpy.data.images.load(floor_texture_path)
 
-        ceiling.use_nodes=True
+        ceiling.use_nodes = True
         bsdf3 = ceiling.node_tree.nodes["Principled BSDF"]
         ceil_tex = ceiling.node_tree.nodes.new('ShaderNodeTexImage')
         ceil_tex.image = bpy.data.images.load(ceiling_texture_path)
 
+        # Create texture coordinate and mapping nodes for walls material
+        tex_coord1 = walls.node_tree.nodes.new('ShaderNodeTexCoord')
+        mapping1 = walls.node_tree.nodes.new('ShaderNodeMapping')
+        mapping1.vector_type = 'POINT'
+        tex_coord1.location = (-400, 300)
+        mapping1.location = (-200, 300)
 
-        # Connect the textures to the materials
+        # Set mapping properties for walls material
+        mapping1.inputs['Scale'].default_value = walls_mapping_scale
+        mapping1.inputs['Rotation'].default_value = walls_mapping_rotation
+        if 'Translation' in mapping1.inputs:
+            mapping1.inputs['Translation'].default_value = walls_mapping_translation
+
+        # Create texture coordinate and mapping nodes for floor material
+        tex_coord2 = floor.node_tree.nodes.new('ShaderNodeTexCoord')
+        mapping2 = floor.node_tree.nodes.new('ShaderNodeMapping')
+        mapping2.vector_type = 'POINT'
+        tex_coord2.location = (-400, 0)
+        mapping2.location = (-200, 0)
+
+        # Set mapping properties for floor material
+        mapping2.inputs['Scale'].default_value = floor_mapping_scale
+        mapping2.inputs['Rotation'].default_value = floor_mapping_rotation
+        if 'Translation' in mapping2.inputs:
+            mapping2.inputs['Translation'].default_value = floor_mapping_translation
+
+        # Create texture coordinate and mapping nodes for ceiling material
+        tex_coord3 = ceiling.node_tree.nodes.new('ShaderNodeTexCoord')
+        mapping3 = ceiling.node_tree.nodes.new('ShaderNodeMapping')
+        mapping3.vector_type = 'POINT'
+        tex_coord3.location = (-400, -300)
+        mapping3.location = (-200, -300)
+
+        # Set mapping properties for ceiling material
+        mapping3.inputs['Scale'].default_value = ceiling_mapping_scale
+        mapping3.inputs['Rotation'].default_value = ceiling_mapping_rotation
+        if 'Translation' in mapping3.inputs:
+            mapping3.inputs['Translation'].default_value = ceiling_mapping_translation
+
+        # Connect nodes in shader editor
+        walls.node_tree.links.new(mapping1.inputs['Vector'], tex_coord1.outputs['UV'])
+        walls.node_tree.links.new(wall_tex.inputs['Vector'], mapping1.outputs['Vector'])
         walls.node_tree.links.new(bsdf1.inputs['Base Color'], wall_tex.outputs['Color'])
+
+        floor.node_tree.links.new(mapping2.inputs['Vector'], tex_coord2.outputs['UV'])
+        floor.node_tree.links.new(floor_tex.inputs['Vector'], mapping2.outputs['Vector'])
         floor.node_tree.links.new(bsdf2.inputs['Base Color'], floor_tex.outputs['Color'])
+
+        ceiling.node_tree.links.new(mapping3.inputs['Vector'], tex_coord3.outputs['UV'])
+        ceiling.node_tree.links.new(ceil_tex.inputs['Vector'], mapping3.outputs['Vector'])
         ceiling.node_tree.links.new(bsdf3.inputs['Base Color'], ceil_tex.outputs['Color'])
-        
+
+        # Set roughness and connect to material output
+        bsdf1.inputs['Roughness'].default_value = 1.0
+        bsdf2.inputs['Roughness'].default_value = 1.0
+        bsdf3.inputs['Roughness'].default_value = 1.0
+
+        # Connect bsdf to material output
+        mat_out = walls.node_tree.nodes['Material Output']
+        walls.node_tree.links.new(mat_out.inputs['Surface'], bsdf1.outputs['BSDF'])
+        floor.node_tree.links.new(mat_out.inputs['Surface'], bsdf2.outputs['BSDF'])
+        ceiling.node_tree.links.new(mat_out.inputs['Surface'], bsdf3.outputs['BSDF'])
+
+        # Assign materials to the object
         self.box_object.data.materials.append(walls)
         self.box_object.data.materials.append(floor)
         self.box_object.data.materials.append(ceiling)
 
+
+        # Assign material indices to the object's polygons
         self.box_object.data.polygons[0].material_index = self.box_object.material_slots.find('walls')
         self.box_object.data.polygons[1].material_index = self.box_object.material_slots.find('walls')
         self.box_object.data.polygons[2].material_index = self.box_object.material_slots.find('walls')
@@ -592,6 +658,9 @@ class AnimationHandler:
 
         # Update the mesh to reflect changes
         self.box_object.data.update()
+   
+
+
 
     def create_light(self, light_type='SUN', color=(1, 1, 1), energy=100):
         """Create a light source in the scene"""
@@ -649,7 +718,7 @@ class AnimationHandler:
             new_dict = self.organize_nla_sequences(self.target_armature, actions_dict, character_name)
             self.place_armature_with_action(self.target_armature, new_dict)
  
-            #self.set_box_properties()
+           
             bpy.context.scene.frame_current = 0
             bpy.context.view_layer.update()
             self.create_cameras(character_name)
@@ -658,6 +727,7 @@ class AnimationHandler:
 
         # Register the frame change handler to follow the character during animation
         self.create_box()
+        self.set_box_properties(self.textures[0],self.textures[1], self.textures[2])
         self.create_scene_cameras()
         bpy.app.handlers.frame_change_pre.clear()
         bpy.app.handlers.frame_change_post.clear()
@@ -672,20 +742,25 @@ class AnimationHandler:
 def main():
 
     root_path = r"C:\Users\PMLS\Desktop\blender stuff"
+    
+    walls_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\textures\forest.jpg"
+    floor_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\textures\ground.jpg"
+    ceiling_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\textures\sky.jpg"
+    textures=[walls_texture_path,floor_texture_path,ceiling_texture_path]
     characters_data = [
         {'name': 'Boy'},
-        {'name': 'Girl'}
+        {'name': 'Another_woman'}
     ]
     actions_list = [
         {
             'Walking': [(10, 40), Vector((1, 1, 0)), Vector((-3, -6, 0))]
         },
         {
-            'Idle': [(10, 40), Vector((0, 0, 0)), Vector((0, 0, 0))]
+            'Walking': [(10, 40), Vector((0, 0, 0)), Vector((3, 5, 0))]
         }
     ]
 
-    animation_handler = AnimationHandler(root_path, characters_data, actions_list)
+    animation_handler = AnimationHandler(root_path, characters_data, actions_list, textures)
     animation_handler.run()
  
 
