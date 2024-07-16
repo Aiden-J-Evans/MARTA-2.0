@@ -26,5 +26,3 @@ def generate_image(prompt):
     path = os.getcwd() + "//texture_generation//generated_images//" + prompt + ".png"
     image.save(path)
     return path
-
-generate_image("desert")

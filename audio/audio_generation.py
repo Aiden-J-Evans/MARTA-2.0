@@ -35,7 +35,7 @@ def generate_audio(index, prompt="", length=10):
 
   return os.getcwd() + "\\audio\\generated_audio\\" + audio_name
 
-def tts(index, sentence):
+def generate_voiceover(index, sentence):
   """
   Generates an audio clip narrating the given sentence.
 
@@ -50,6 +50,4 @@ def tts(index, sentence):
   path = os.getcwd() + "\\audio\\generated_audio\\speech" + str(index) + ".mp3"
   tts.save(path)
   return path
-
-
 

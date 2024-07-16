@@ -28,5 +28,3 @@ def generate_object(prompt):
     mesh_render.save_rendering(path, output)
     
     return path
-
-generate_object('human')
