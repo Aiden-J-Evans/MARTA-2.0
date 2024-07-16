@@ -2,8 +2,6 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 import torch
 
-
-
 def estimate_sentence_length(sentence):
     """
     Returns the estimated spoken length of the sentence. Averages higher times.
