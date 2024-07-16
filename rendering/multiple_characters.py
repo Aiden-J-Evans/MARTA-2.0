@@ -36,7 +36,38 @@ class AnimationHandler:
         bpy.data.scenes[0].timeline_markers.clear()
         
         bpy.ops.outliner.orphans_purge(do_local_ids=True, do_linked_ids=True, do_recursive=True)
-            
+
+
+    def retarget_rokoko(self, source_armature, target_armature):
+        def enable_addon(addon_name):
+            if addon_name not in bpy.context.preferences.addons:
+                bpy.ops.preferences.addon_enable(module=addon_name)
+
+        # Enable the Rokoko Addon
+        enable_addon('rokoko-studio-live-blender')
+
+        # Function to build bone list
+        def build_bone_list():
+            if source_armature:
+                bpy.context.scene.rsl_retargeting_armature_source = target_armature
+            else:
+                print("Source Armature not found")
+            if target_armature:
+                bpy.context.scene.rsl_retargeting_armature_target = source_armature
+            else:
+                print("Target Armature not found")
+            bpy.ops.rsl.build_bone_list()
+        
+        build_bone_list()
+
+        # Function to retarget using the Rokoko addon
+        def retarget_animation():
+            bpy.ops.rsl.retarget_animation()
+        
+        retarget_animation()
+
+
+
     def load_rig(self, filepath: str, name: str):
         """Load an animation rig from an FBX file"""
         bpy.ops.import_scene.fbx(filepath=filepath)
@@ -206,7 +237,7 @@ class AnimationHandler:
         for action_name, data in actions_dict.items():
             frame_start = data[0][0]
             frame_end = data[0][1]
-            action_name = character_name+'_' + action_name.lower().replace(" ", "_") + "_rig_action"
+            action_name = character_name+'_' + action_name.lower().replace(" ", "_") + "_rig_action Retarget"
             strip = self.get_strip(target_armature, action_name)
             original_period = int(strip.frame_end - strip.frame_start)
             remaining_period = frame_end - frame_start
@@ -710,9 +741,10 @@ class AnimationHandler:
                 action_fbx_path = os.path.join(animation_path, f"{action_name}.fbx")
                 rig_name = character_name+'_' + action_name.lower().replace(" ", "_") + "_rig"
                 action_armature = self.load_rig(action_fbx_path, rig_name)
+                self.retarget_rokoko(self.target_armature,action_armature)
                 action_armature.hide_set(True)
-                self.push_action_to_nla(self.target_armature, f"{rig_name}_action")
-                self.set_nla_strip_properties(self.target_armature, f"{rig_name}_action")
+                self.push_action_to_nla(self.target_armature, f"{rig_name}_action Retarget")
+                self.set_nla_strip_properties(self.target_armature, f"{rig_name}_action Retarget")
         
             # Organize the sequences and positions
             new_dict = self.organize_nla_sequences(self.target_armature, actions_dict, character_name)
@@ -749,14 +781,14 @@ def main():
     textures=[walls_texture_path,floor_texture_path,ceiling_texture_path]
     characters_data = [
         {'name': 'Boy'},
-        {'name': 'Another_woman'}
+        {'name':'Boy - Copy'}
     ]
     actions_list = [
         {
             'Walking': [(10, 40), Vector((1, 1, 0)), Vector((-3, -6, 0))]
         },
         {
-            'Walking': [(10, 40), Vector((0, 0, 0)), Vector((3, 5, 0))]
+            'Walking': [(10, 40), Vector((0, 0, 0)), Vector((3, -6, 0))]
         }
     ]
 
