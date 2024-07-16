@@ -47,5 +47,5 @@ pip install huggingface_hub==0.23.4
 At this point you need to change some code in the transformer package anaconda3\envs\momask\lib\site-packages\transformers\models\musicgen\modeling_musicgen.py line 2474 & 2476, switching `torch.concatenate()` to `torch.cat()` 
 
 ## to do / improvements
-- [] check transformers=3.1.0 compatibility with project so no manual changes need to be done to the package (this would be for object generation)
-- [] add logic that (optionally) clears files from previous runs
+- [ ] check transformers=3.1.0 compatibility with project so no manual changes need to be done to the package (this would be for object generation)
+- [ ] add logic that (optionally) clears files from previous runs
