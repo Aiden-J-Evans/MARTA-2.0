@@ -1,17 +1,13 @@
 from rendering.start_render import render
-# will need to change anaconda3\envs\momask\lib\site-packages\transformers\models\musicgen\modeling_musicgen.py", line 2055 & 2057 from concatenate() to cat()
-from audio.audio_generation import generate_audio, generate_voiceover
 from nlp.nlp_manager import estimate_sentence_length, find_possible_objects, find_possible_background
-#from mesh_generation.generator import * (import this when I find a workaround to get meshgpt working, but i highly doubt it)
-from rendering.momask_utils import create_animation
-from texture_generation.stable import generate_image
-import spacy
+from spacy import load
 import json
+import torch
 from transformers import pipeline
 
 story = input("Please enter your story (End with a period): ")
 #voiceover_enabled = input("Would you like a voice over? (Y/n)") == 'Y'
-nlp = spacy.load("en_core_web_sm")
+nlp = load("en_core_web_sm")
 doc = nlp(story)
 
 #sentence container
@@ -38,20 +34,25 @@ next_frame = 1
 all_characters = []
 
 # possible object to generate
-#objs = find_possible_objects(prompt)
+#objs = find_possible_objects(story)
 
 #for obj in objs:
-    #generate_object(obj)
+   # print(obj)
 
 setting = find_possible_background(story)
+
+torch.cuda.empty_cache()
+from texture_generation.stable import generate_image
 setting_image_path = generate_image(setting)
+
 timeline['setting_image_path'] = setting_image_path
 
 # determines if an animation is needed or not
 classifier = pipeline("zero-shot-classification")
 
-test = True
 
+from audio.audio_generation import generate_audio, generate_voiceover
+from rendering.momask_utils import create_animation
 
 for i, sentence_tokens in enumerate(sentences):
     # get setence (without period)
