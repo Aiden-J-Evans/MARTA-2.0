@@ -1,0 +1,7 @@
+transformers==4.42.2
+spacy==3.7.2
+diffusers==0.18.2
+gtts==2.5.1
+cupy==12.3.0
+ffmpeg==4.3
+huggingface_hub==0.23.4

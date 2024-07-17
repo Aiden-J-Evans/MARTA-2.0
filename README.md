@@ -38,11 +38,17 @@ conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvi
 Navigate to `momask-codes/requirements.txt` and change `matplotlib==3.1.3` to `matplotlib==3.4.0`. This is the a version of matplotlib that covers all aspects of the project.
 ```
 pip install -r momask-codes/requirements.txt
+```
+At this point you can use `pip install -r requirements.txt` or run the following commands
+```
 conda install transformers=4.42.2 spacy=3.7.2 diffusers gtts=2.5.1
 conda install -c conda-forge cupy
-python -m spacy download en_core_web_sm
 conda install -c conda-forge ffmpeg=4.3.0
 pip install huggingface_hub==0.23.4
+```
+Also install the spaCy model
+```
+python -m spacy download en_core_web_sm
 ```
 At this point you need to change some code in the transformer package anaconda3\envs\momask\lib\site-packages\transformers\models\musicgen\modeling_musicgen.py line 2474 & 2476, switching `torch.concatenate()` to `torch.cat()` 
 
