@@ -8,8 +8,9 @@ from meshgpt_pytorch import (
 
 def generate_object(prompt):
     """
-    Generates an object from the given prompt \n
-    !!! Currently not working, needs a newer version of torch incompatible with other parts of the project !!!
+    !!! Currently not working, needs a newer version of torch incompatible with other parts of the project !!!\n
+
+    Generates an object from the given prompt
 
     Args:
         prompt (str): the object to be generated

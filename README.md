@@ -2,6 +2,7 @@
 Further research done on the MARTA project.
 
 ## Set-up
+<Details>
 
 ### Pre-reqs
 1. download anaconda
@@ -31,20 +32,37 @@ Create and navigate to `momask-codes/checkpoints` then create two folders, `kit`
 ![Folder Organization Structure](readme_assets/Momask%20Example%20Display.png)
 
 ```
-conda create -n momask python=3.8
+conda create -n momask python=3.9
 conda activate momask
 conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
 ```
-Navigate to `momask-codes/requirements.txt` and change `matplotlib==3.1.3` to `matplotlib==3.4.0`. This is the a version of matplotlib that covers all aspects of the project.
+
+At this point you can use `pip install -r requirements.txt` and `conda install ffmpeg=4.3`.\
+Install the spaCy model
 ```
-pip install -r momask-codes/requirements.txt
-conda install transformers=4.42.2 spacy=3.7.2 diffusers gtts=2.5.1
-conda install -c conda-forge cupy
 python -m spacy download en_core_web_sm
-conda install -c conda-forge ffmpeg=4.3.0
-pip install huggingface_hub==0.23.4
 ```
-At this point you need to change some code in the transformer package anaconda3\envs\momask\lib\site-packages\transformers\models\musicgen\modeling_musicgen.py line 2474 & 2476, switching `torch.concatenate()` to `torch.cat()` 
+
+You will also need to install Microsoft Visual C++ 14.0 or greater from [here](https://visualstudio.microsoft.com/visual-cpp-build-tools/). You can use this [tutorial](https://www.youtube.com/watch?v=pDURF7345M8).\
+
+At this point you need to change some code in the transformer package `anaconda3\envs\momask\lib\site-packages\transformers\models\musicgen\modeling_musicgen.py` line 2474 & 2476, switching `torch.concatenate()` to `torch.cat()`.
+
+</details>
+
+## Running MARTA
+<details>
+
+Once you have completed the set-up, ensure your conda environment is still activated.\
+
+Assuming you are in the MARTA-2.0 directory, you can now run MARTA.py through your code editor or with `python marta.py`.\
+
+When you run the script, you will be required to download all models that MARTA utilizes.\
+Please note that downloading these models requires around ==15 GB of disk space==.\
+
+After these models have downloaded, you will be prompted in your terminal to enter your story.
+
+
+</details>
 
 ## to do / improvements
 - [ ] check transformers=3.1.0 compatibility with project so no manual changes need to be done to the package (this would be for object generation)

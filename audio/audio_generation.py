@@ -50,4 +50,3 @@ def generate_voiceover(index, sentence):
   path = os.getcwd() + "\\audio\\generated_audio\\speech" + str(index) + ".mp3"
   tts.save(path)
   return path
-
