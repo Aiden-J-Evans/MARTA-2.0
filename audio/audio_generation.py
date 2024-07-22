@@ -4,7 +4,7 @@ from gtts import gTTS
 # use musicgen-small,medium
 
 
-def generate_audio(index, prompt="", length=10):
+def generate_audio(index, prompt, length=10) -> str:
   """
   Generates an audioclip using a transformer
   
@@ -15,17 +15,18 @@ def generate_audio(index, prompt="", length=10):
   Returns:
     The path to the audio file
   """
+  
   processor = AutoProcessor.from_pretrained("facebook/musicgen-small")
   model = MusicgenForConditionalGeneration.from_pretrained("facebook/musicgen-small")
-
   inputs = processor(
       text=[prompt],
       padding=True,
       return_tensors="pt",
   )
 
+  print("Generating music...")
   audio_values = model.generate(**inputs, max_new_tokens = round(length*51.2))
-
+  print("Done generating music")
   import scipy
 
   sampling_rate = model.config.audio_encoder.sampling_rate
@@ -33,9 +34,10 @@ def generate_audio(index, prompt="", length=10):
 
   scipy.io.wavfile.write(os.getcwd() + "\\audio\\generated_audio\\" + audio_name, rate=sampling_rate, data=audio_values[0, 0].numpy())
 
-  return os.getcwd() + "\\audio\\generated_audio\\" + audio_name
+  
+  return os.path.join(os.getcwd() + "audio" + "generated_audio" + audio_name) 
 
-def generate_voiceover(index, sentence):
+def generate_voiceover(index=int, sentence=str) -> str:
   """
   Generates an audio clip narrating the given sentence.
 
@@ -46,6 +48,7 @@ def generate_voiceover(index, sentence):
   Returns:
     The path to the generated audio.
   """
+  print("Generating voiceover...")
   tts = gTTS(text=sentence, lang='en')
   path = os.getcwd() + "\\audio\\generated_audio\\speech" + str(index) + ".mp3"
   tts.save(path)

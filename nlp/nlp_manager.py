@@ -28,7 +28,7 @@ def find_possible_objects(story):
         story (str): the entire story whose background objects will be interpreted
 
     Returns:
-        A python list of the objects.
+        A python list containing a list of objects [0] and a string setting [1].
     """
 
     torch.random.manual_seed(0)
@@ -55,29 +55,38 @@ def find_possible_objects(story):
             "do_sample": False,
         }
 
-    messages = [
-        {"role": "user",
-          "content": "What are some very simple background objects which stand on the ground that would make sense for this story: \"" + story + "\" Return the 1-word objects in a python list."}
+    object_prompt = "What are some very simple background objects which stand on the ground that would make sense for this story: \"" + story + "\" Return the 1-word objects in a python list."
+    background_prompt = "What is a detailed prompt for an AI image generator with the task of generating a background image relating to this story's location: \"" + story + "\" Don't include any characters or objects in the prompt, it should be the setting only. It also has to be less than 77 tokens."
+
+    obj_message = [
+        {"role": "user", "content" : object_prompt},
     ]
 
-    output = pipe(messages, **generation_args)
-    list_string = output[0]['generated_text'].replace('```python\n', '').replace('\n```', '').strip()
-    del output, model, tokenizer, pipe, generation_args
+    setting_message = [
+        {"role": "user", "content" : background_prompt},
+    ]
+
+    obj_output = pipe(obj_message, **generation_args)
+    list_string = obj_output[0]['generated_text'].replace('```python\n', '').replace('\n```', '').strip()
+
+    setting_output = pipe(setting_message, **generation_args)
+    setting = setting_output[0]['generated_text'].replace('```python\n', '').replace('\n```', '').strip()
+
+    del obj_output, model, tokenizer, pipe, generation_args, setting_output
     gc.collect()
     torch.cuda.empty_cache()
-    return eval(list_string)
+    return [eval(list_string), str(setting)]
 
 def find_possible_background(story):
     """
-    Uses Microsoft Phi to decide a background setting for the entire story.
+    Uses Microsoft Phi to decide acceptable objects to be generated for the story.
 
     Args:
-        story (str): the entire story
+        story (str): the entire story whose background objects will be interpreted
 
     Returns:
-        A string of the estimated setting.
+        A python list containing a list of objects [0] and a string setting [1].
     """
-    
     torch.random.manual_seed(0)
 
     model = AutoModelForCausalLM.from_pretrained(
@@ -101,17 +110,15 @@ def find_possible_background(story):
             "temperature": 0.0,
             "do_sample": False,
         }
-
-    messages = [
-        {"role": "user",
-          "content": "What is a very simple location setting which would make sense for this story: \"" + story + "\" Return only 1 word."}
+    background_prompt = "What is a detailed prompt for an AI image generator with the task of generating a background image relating to this story's location: \"" + story + "\" Don't include any characters or objects in the prompt, it should be the setting only. It also has to be less than 77 tokens."
+    setting_message = [
+        {"role": "user", "content" : background_prompt},
     ]
 
-    output = pipe(messages, **generation_args)
-    string = output[0]['generated_text'].replace('```python\n', '').replace('\n```', '').strip()
-    torch.cuda.empty_cache()
-    del output, model, tokenizer, pipe, generation_args
+    setting_output = pipe(setting_message, **generation_args)
+    setting = setting_output[0]['generated_text'].replace('```python\n', '').replace('\n```', '').strip()
+
+    del model, tokenizer, pipe, generation_args, setting_output
     gc.collect()
-    return str(string)
-
-
+    torch.cuda.empty_cache()
+    return str(setting)
