@@ -1,8 +1,7 @@
 from rendering.start_render import render
-from nlp.nlp_manager import estimate_sentence_length, find_possible_objects, find_possible_background
+from nlp.nlp_manager import estimate_sentence_length, find_possible_background
 from spacy import load
-import json
-import torch
+import json, torch, os
 from transformers import pipeline
 
 story = input("Please enter your story (End with a period): ")
@@ -33,23 +32,14 @@ timeline = {}
 next_frame = 1
 all_characters = []
 
-# possible object to generate
-#objs = find_possible_objects(story)
-
-#for obj in objs:
-   # print(obj)
-
-setting = find_possible_background(story)
-
 torch.cuda.empty_cache()
 from texture_generation.stable import generate_image
-setting_image_path = generate_image(setting)
+setting_image_path = generate_image(find_possible_background(story))
 
-timeline['setting_image_path'] = setting_image_path
+timeline['setting_image_path'] = os.path.join(os.getcwd(), "texture_generation", "background.png") #setting_image_path
 
 # determines if an animation is needed or not
-classifier = pipeline("zero-shot-classification")
-
+classifier = pipeline("zero-shot-classification", device="cuda" if torch.cuda.is_available() else "cpu", model="facebook/bart-large-mnli")
 
 from audio.audio_generation import generate_audio, generate_voiceover
 from rendering.momask_utils import create_animation
@@ -57,7 +47,7 @@ from rendering.momask_utils import create_animation
 for i, sentence_tokens in enumerate(sentences):
     # get setence (without period)
     sentence = ' '.join([str(token) for token in sentence_tokens])
-    
+    print("Working on:", sentence)
     # estimates sentence length based on an equation
     sequence_length = estimate_sentence_length(sentence)
     
