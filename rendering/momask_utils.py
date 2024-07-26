@@ -20,3 +20,5 @@ def create_animation(prompt, length=5):
     torch.cuda.empty_cache()
     gc.collect()
     return new_path
+
+#create_animation("Goliath falls down")
