@@ -1,8 +1,12 @@
 from rendering.start_render import render
-from nlp.nlp_manager import estimate_sentence_length, find_possible_background
+from nlp.nlp_manager import *
+from texture_generation.stable import generate_image
+from audio.audio_generation import generate_audio, generate_voiceover
+from rendering.momask_utils import create_animation
+
 from spacy import load
-import json, torch, os
 from transformers import pipeline
+import json, torch, os
 
 story = input("Please enter your story (End with a period): ")
 #voiceover_enabled = input("Would you like a voice over? (Y/n)") == 'Y'
@@ -33,16 +37,34 @@ next_frame = 1
 all_characters = []
 
 torch.cuda.empty_cache()
-from texture_generation.stable import generate_image
-setting_image_path = generate_image(find_possible_background(story))
 
-timeline['setting_image_path'] = os.path.join(os.getcwd(), "texture_generation", "background.png") #setting_image_path
+from nlp.nlp_manager import *
+from texture_generation.stable import generate_image
+import os
+story = "David was a young shepherd. Goliath was a giant warrior. David used a sling to throw a stone. The stone hit Goliath on the forehead. David celebrates joyfully while Goliath lay slain on the ground."
+file_paths = {
+    "setting_image_path": "background.png",
+    "floor_image_path": "floor.png",
+    "ceiling_image_path": "ceiling.png"
+}
+
+# prompts functions
+prompts_functions = {
+    "setting_image_path": get_background_prompt,
+    "floor_image_path": get_floor_prompt,
+    "ceiling_image_path": get_ceiling_prompt
+}
+
+# generate and save images
+for key, filename in file_paths.items():
+    image_path = os.path.join(os.getcwd(), "texture_generation", "generated_images", filename)
+    generate_image(prompts_functions[key](story), image_path, width=1536 if filename == 'background.png' else 512)
+    timeline[key] = image_path
 
 # determines if an animation is needed or not
 classifier = pipeline("zero-shot-classification", device="cuda" if torch.cuda.is_available() else "cpu", model="facebook/bart-large-mnli")
 
-from audio.audio_generation import generate_audio, generate_voiceover
-from rendering.momask_utils import create_animation
+
 
 for i, sentence_tokens in enumerate(sentences):
     # get setence (without period)
@@ -58,24 +80,30 @@ for i, sentence_tokens in enumerate(sentences):
     # uses a transformer to estimate sentence similarity
     action_score = classifier(str(sentence), ["physical action"])["scores"][0]
     actions = [str(token.lemma_) for token in sentence_tokens if token.pos_ == "VERB" and action_score > ACTION_THRESHOLD]
-    characters = [str(token) for token in sentence_tokens if token.pos_ == "PROPN" and classifier(str(token), ["person"])["scores"][0] > CHARACTER_THRESHOLD]
+    currrent_characters = [str(token) for token in sentence_tokens if token.pos_ == "PROPN" and classifier(str(token), ["character"])["scores"][0] > CHARACTER_THRESHOLD]
 
     character_dict = {}
-    if len(characters) != 0:
-        for index, character in enumerate(characters):
+    if currrent_characters:
+        for index, character in enumerate(currrent_characters):
             if character not in all_characters:
                 all_characters.append(character)
-            else:
+            else: # if the character has already been mentioned, move to most recent in the list
                 all_characters.remove(character)
                 all_characters.append(character)
-            if len(actions) != 0 and index < len(actions):
-                character_dict[character.lower()] = {'animation':create_animation(prompt=actions[index], length=sequence_length)}
+
+            if actions and index < len(actions):
+                character_dict[character.lower()] = {'animation':create_animation(prompt=get_animation_prompt(sentence, character, story), length=sequence_length)}
             else:
                 character_dict[character.lower()] = {'animation': 'idle'}       
-    elif len(actions) != 0:
-        character_dict[all_characters[-1].lower()] = {'animation':create_animation(prompt=actions[0], length=sequence_length)}
+    elif actions: # this gives the last action to the most recent character to be metioned if no characters were metioned in this sentence
+        character_dict[all_characters[-1].lower()] = {'animation':create_animation(prompt=get_animation_prompt(sentence, character, story), length=sequence_length)}
     else:
-        character_dict[all_characters[-1].lower()] = {'animation':'idle'}
+        for character in all_characters:
+            character_dict[character.lower()] = {'animation':'idle'}
+
+    # if characters are not mentioned in the current sentence, set their animation to idle
+    for character in set(all_characters) - set(currrent_characters):
+        character_dict[character.lower()] = {'animation': 'idle'}
 
     # saves the frames
     timeline[str(next_frame)] = {'audio_paths': [background_audio_path, tts_audio_path], 'characters': character_dict}
@@ -86,5 +114,5 @@ for i, sentence_tokens in enumerate(sentences):
 timeline['end_frame'] = next_frame
 with open('frame_data.json', 'w', encoding='utf-8') as f:
     json.dump(timeline, f, ensure_ascii=False, indent=4)
-render()
+#render()
 

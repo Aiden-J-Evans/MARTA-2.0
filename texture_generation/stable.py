@@ -5,7 +5,7 @@
 import torch, os, gc
 from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler
 
-def generate_image(prompt):
+def generate_image(prompt, path, height = 512, width = 512):
     """
     Generates an image using stable-diffusion 2.1 based off a prompt
 
@@ -21,8 +21,7 @@ def generate_image(prompt):
     pipe.enable_attention_slicing() 
     pipe.enable_model_cpu_offload()
     torch.cuda.empty_cache()
-    image = pipe(prompt, height=512, width=1024).images[0]
-    path = os.getcwd() + "\\texture_generation\\generated_images\\background.png"
+    image = pipe(prompt, height=height, width=width).images[0]
     image.save(path)
     torch.cuda.empty_cache()
     gc.collect()

@@ -1,5 +1,5 @@
 from transformers import AutoProcessor, MusicgenForConditionalGeneration
-import os
+import os, scipy
 from gtts import gTTS
 # use musicgen-small,medium
 
@@ -24,18 +24,17 @@ def generate_audio(index, prompt, length=10) -> str:
       return_tensors="pt",
   )
 
-  print("Generating music...")
+  print("Generating music for \"" + prompt + "\"")
   audio_values = model.generate(**inputs, max_new_tokens = round(length*51.2))
-  print("Done generating music")
-  import scipy
+  print("Done generating music for \"" + prompt + "\"")
 
   sampling_rate = model.config.audio_encoder.sampling_rate
-  audio_name = "background" + str(index) + ".wav"
 
-  scipy.io.wavfile.write(os.getcwd() + "\\audio\\generated_audio\\" + audio_name, rate=sampling_rate, data=audio_values[0, 0].numpy())
+  path = os.path.join(os.getcwd(), "audio", "generated_audio", "background" + str(index) + ".wav")
 
-  
-  return os.path.join(os.getcwd() + "audio" + "generated_audio" + audio_name) 
+  scipy.io.wavfile.write(path, rate=sampling_rate, data=audio_values[0, 0].numpy())
+
+  return path
 
 def generate_voiceover(index=int, sentence=str) -> str:
   """
@@ -50,6 +49,7 @@ def generate_voiceover(index=int, sentence=str) -> str:
   """
   print("Generating voiceover...")
   tts = gTTS(text=sentence, lang='en')
-  path = os.getcwd() + "\\audio\\generated_audio\\speech" + str(index) + ".mp3"
+  path = os.path.join(os.getcwd(),  "audio", "generated_audio", "speech" + str(index) + ".mp3") 
   tts.save(path)
   return path
+
