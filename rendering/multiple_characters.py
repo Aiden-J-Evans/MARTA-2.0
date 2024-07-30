@@ -929,7 +929,7 @@ class AnimationHandler:
         for character_data, actions_dict in zip(self.characters_data, self.actions_list):
             character_name = character_data['name']
             self.character_name=character_name
-            character_path = os.path.join(self.root_path, 'characters')
+            character_path = os.path.join(self.root_path, 'MARTA-2.0\characters')
 
             # Load the main target armature
             target_fbx_path = os.path.join(character_path, f"{character_name}.fbx")
@@ -987,11 +987,11 @@ class AnimationHandler:
         
 def main():
 
-    root_path = r"C:\Users\PMLS\Desktop\blender stuff\MARTA-2.0"
+    root_path = r"C:\Users\PMLS\Desktop\blender stuff"
     output_filename='final'
-    walls_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\MARTA-2.0\textures\walls_texture.webp"
-    floor_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\MARTA-2.0\textures\floor.jpg"
-    ceiling_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\MARTA-2.0\textures\walls_texture.webp"
+    walls_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\textures\walls_texture.webp"
+    floor_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\textures\floor.jpg"
+    ceiling_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\textures\walls_texture.webp"
     textures=[walls_texture_path,floor_texture_path,ceiling_texture_path]
     characters_data = [
         {'name': 'Boy'}, {'name': 'Girl'}
