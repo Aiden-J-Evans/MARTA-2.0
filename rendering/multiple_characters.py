@@ -82,15 +82,6 @@ class AnimationHandler:
         rig.show_in_front = True
         return rig
     
-    def load_rig_back(self, filepath: str, name: str):
-        """Load a rig from an FBX file"""
-        bpy.ops.import_scene.fbx(filepath=filepath, use_manual_orientation=True, use_anim=False, axis_forward='Z', axis_up='Y')
-        rig = bpy.context.active_object
-        rig.name = name
-        rig.show_in_front = True
-        return rig
-
-
 
     def load_animation(self, filepath: str, name: str):
         """Load a rig from an FBX file"""
@@ -100,7 +91,7 @@ class AnimationHandler:
         rig.show_in_front = True
         rig.animation_data.action.name = f'{name}_action'
         return rig
-
+ 
     
     def push_action_to_nla(self, armature, action_name):
         """Push down action to NLA"""
@@ -860,13 +851,6 @@ class AnimationHandler:
 
         return light_object
 
-    def load_background_rig(file, filepath: str, name: str):
-        """Load a rig from an FBX file"""
-        bpy.ops.import_scene.fbx(filepath=filepath, use_manual_orientation=True, use_anim=False, axis_forward='-Y', axis_up='Z')
-        rig = bpy.context.active_object
-        rig.name = name
-        rig.show_in_front = True
-        return rig
 
 
     def generate_random_locations_within_boundaries(self,vertices, main_scene_divisor, num_points):
@@ -902,7 +886,7 @@ class AnimationHandler:
         """Place rigs randomly around the origin inside a cube based on left or right side"""
         # Get the cube object
         cube = self.box_object
-        path=self.root_path+'\characters'
+        path=self.root_path+'\MARTA-2.0\characters'
         vertices = [cube.matrix_world @ v.co for v in cube.data.vertices]
         main_scene_divisor=1.5
         num_points=len(self.background_characters)
@@ -912,7 +896,7 @@ class AnimationHandler:
         # Load and place characters on the left side
         for i, char_name  in enumerate(self.background_characters):
             filepath = os.path.join(path, f'{char_name}.fbx')
-            rig = self.load_background_rig(filepath, char_name)
+            rig = self.load_rig(filepath, char_name)
             if rig is None:
                 print(f"Failed to load rig from '{filepath}'.")
                 continue
@@ -1011,7 +995,7 @@ def main():
         }
 
     ]
-    background_characters = []
+    background_characters = ['D_Army_1']
     animation_handler = AnimationHandler(root_path, characters_data, actions_list, textures, output_filename, background_characters)
     animation_handler.run()
  
