@@ -8,8 +8,38 @@ from spacy import load
 from transformers import pipeline
 import json, torch, os
 
+def set_idle_animation(character_dict : dict, character_positions : dict, character : str):
+    """
+    Sets a character's animation data to the idle values
+    
+    Args:
+        character_dict (dict): the dictionary containing all current characters in the story
+        character_positions (dict): the dictionary containing all end positions at specific sentences for the story
+        character (str): The name of the character (lowercase)
+    """
+    last_position = character_positions.get(character, [(len(character_positions), 0, 0)])[-1]
+    character_dict[character] = {'animation': 'idle', 'sequence_end_position': last_position}
+    character_positions.setdefault(character, []).append(last_position)
+    
+def set_generated_animation(story: str, character_dict : dict, character_positions : dict, sentence : str, character : str, sequence_length : int):
+    """
+    Sets a character's animation data its generated values
+    
+    Args:
+        story (str): the entire story for context
+        character_dict (dict): the dictionary containing all current characters in the story
+        character_positions (dict): the dictionary containing all end positions at specific sentences for the story
+        sentence (str): the current sentence
+        character (str): The name of the character (lowercase)
+        sequence_length (int): the estimated number of frames in the current sentence
+    """
+    animation_prompt = get_animation_prompt(sentence, character, story)
+    position = get_next_movement(sentence, character, story, character_positions, animation_prompt)
+    animation_path = create_animation(prompt=animation_prompt, length=sequence_length)
+    character_dict[character] = {'animation': animation_path, 'sequence_end_position': position}
+    character_positions.setdefault(character, [(len(character_positions), 0, 0)]).append(position)
+
 story = input("Please enter your story (End with a period): ")
-#voiceover_enabled = input("Would you like a voice over? (Y/n)") == 'Y'
 nlp = load("en_core_web_sm")
 doc = nlp(story)
 
@@ -65,6 +95,7 @@ for key, filename in file_paths.items():
 classifier = pipeline("zero-shot-classification", device="cuda" if torch.cuda.is_available() else "cpu", model="facebook/bart-large-mnli")
 
 
+character_positions = {}
 
 for i, sentence_tokens in enumerate(sentences):
     # get setence (without period)
@@ -80,7 +111,7 @@ for i, sentence_tokens in enumerate(sentences):
     # uses a transformer to estimate sentence similarity
     action_score = classifier(str(sentence), ["physical action"])["scores"][0]
     actions = [str(token.lemma_) for token in sentence_tokens if token.pos_ == "VERB" and action_score > ACTION_THRESHOLD]
-    currrent_characters = [str(token) for token in sentence_tokens if token.pos_ == "PROPN" and classifier(str(token), ["character"])["scores"][0] > CHARACTER_THRESHOLD]
+    currrent_characters = [str(token).lower() for token in sentence_tokens if token.pos_ == "PROPN" and classifier(str(token), ["character"])["scores"][0] > CHARACTER_THRESHOLD]
 
     character_dict = {}
     if currrent_characters:
@@ -92,22 +123,26 @@ for i, sentence_tokens in enumerate(sentences):
                 all_characters.append(character)
 
             if actions and index < len(actions):
-                character_dict[character.lower()] = {'animation':create_animation(prompt=get_animation_prompt(sentence, character, story), length=sequence_length)}
+                set_generated_animation(story, character_dict, character_positions, sentence, character, sequence_length)
             else:
-                character_dict[character.lower()] = {'animation': 'idle'}       
+                set_idle_animation(character_dict, character_positions,character)
+
     elif actions: # this gives the last action to the most recent character to be metioned if no characters were metioned in this sentence
-        character_dict[all_characters[-1].lower()] = {'animation':create_animation(prompt=get_animation_prompt(sentence, character, story), length=sequence_length)}
+        character = all_characters[-1]
+        set_generated_animation(story, character_dict, character_positions, sentence, character, sequence_length)
     else:
         for character in all_characters:
-            character_dict[character.lower()] = {'animation':'idle'}
+            set_idle_animation(character_dict, character_positions, character)
 
     # if characters are not mentioned in the current sentence, set their animation to idle
     for character in set(all_characters) - set(currrent_characters):
-        character_dict[character.lower()] = {'animation': 'idle'}
+        set_idle_animation(character_dict, character_positions, character)
 
     # saves the frames
     timeline[str(next_frame)] = {'audio_paths': [background_audio_path, tts_audio_path], 'characters': character_dict}
     next_frame += sequence_length * 30
+
+
 
 
 

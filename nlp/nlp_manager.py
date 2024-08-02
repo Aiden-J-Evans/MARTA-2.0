@@ -26,7 +26,7 @@ def get_object_list(story):
         story (str): the entire story whose background objects will be interpreted
 
     Returns:
-        A python list containing a list of objects [0] and a string setting [1].
+        A python list containing possible objects.
     """
 
     torch.random.manual_seed(0)
@@ -73,8 +73,14 @@ def get_object_list(story):
     del obj_output, model, tokenizer, pipe, generation_args, setting_output
     gc.collect()
     torch.cuda.empty_cache()
-    return [eval(list_string), str(setting)]
 
+    try:
+        output = eval(list_string)
+        return [output, str(setting)]
+    except:
+        print("Generated object list was not in the correct format. Run MARTA again.")
+
+    
 def get_background_prompt(story):
     """
     Uses Microsoft Phi to decide acceptable objects to be generated for the story.
@@ -83,7 +89,7 @@ def get_background_prompt(story):
         story (str): the entire story whose background objects will be interpreted
 
     Returns:
-        A python list containing a list of objects [0] and a string setting [1].
+        The string prompt for the background image.
     """
     torch.random.manual_seed(0)
 
@@ -129,7 +135,7 @@ def get_animation_prompt(sentence : str, character : str, story : str):
         story (str): the entire story whose background objects will be interpreted
 
     Returns:
-        A python list containing a list of objects [0] and a string setting [1].
+        The string prompt for the background animation.
     """
     torch.random.manual_seed(0)
 
@@ -264,3 +270,50 @@ def get_ceiling_prompt(story : str) -> str:
     torch.cuda.empty_cache()
     return str(ceiling)
 
+def get_next_movement(current_sentence : str, current_character : str, story : str, character_positions : dict, animation_name : str) -> tuple:
+    """
+    Uses Microsoft Phi to decide acceptable character movement for the story.
+
+    Args:
+        story (str): the entire story whose background objects will be interpreted
+
+    Returns:
+        The string prompt for the background image.
+    """
+    torch.random.manual_seed(0)
+
+    model = AutoModelForCausalLM.from_pretrained(
+            "microsoft/Phi-3-mini-4k-instruct", 
+            device_map="cuda", 
+            torch_dtype="auto", 
+            trust_remote_code=True, 
+        )
+
+    tokenizer = AutoTokenizer.from_pretrained("microsoft/Phi-3-mini-4k-instruct")
+
+    pipe = pipeline(
+            "text-generation",
+            model=model,
+            tokenizer=tokenizer,
+        )
+
+    generation_args = {
+            "max_new_tokens": 500,
+            "return_full_text": False,
+            "temperature": 0.0,
+            "do_sample": False,
+        }
+    
+    position_prompt = "You must hypothesize the position that the character will move to by the end of the sentence. For context, the entire story is \"" + story + "\". The current character is: " + current_character + ". The current sentence is: \"" + current_sentence + "\" The name of the animation the character performs over this sentence is: " + animation_name + ". For more context, here are the previous vector coordinates of this character and the other characters in the story: " + "".join([name + ": " + "".join([str(p) + "," for p in positions]) for name, positions in character_positions.items()]) + ". Provide the new estimated Vector position for the character in a python tuple based on the animation. It should only be the tuple, no other tokens. If you fail to provide a response that python can evaluate, the program will fail."
+    print(position_prompt)
+    position_message = [
+        {"role": "user", "content" : position_prompt},
+    ]
+
+    position_output = pipe(position_message, **generation_args)
+    new_positon = position_output[0]['generated_text'].replace('```python\n', '').replace('\n```', '').strip()
+
+    del model, tokenizer, pipe, generation_args, position_output
+    gc.collect()
+    torch.cuda.empty_cache()
+    return eval(new_positon)

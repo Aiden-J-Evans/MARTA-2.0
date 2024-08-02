@@ -1,4 +1,4 @@
-# MARTA-2.0
+# MARTA-2.0 (Modern Automatic Renderings from Text to Animations) Alpha Build
 MARTA is a proof of concept for a text-to-3D animation program that utilizes numerous AI models to generate a cohesive video.
 
 ## Set-up :wrench:
@@ -12,6 +12,7 @@ MARTA is a proof of concept for a text-to-3D animation program that utilizes num
 5. Navigate to MARTA-2.0 in your terminal
 6. Ensure you have [Git](https://git-scm.com/downloads) installed
 7. Install [Blender](https://www.blender.org/), we used version 4.1
+8. Install [Rokoko Blender Addon](https://www.rokoko.com/integrations/blender)
 
 ### Environment:
 

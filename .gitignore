@@ -1,5 +1,9 @@
 momask-codes
-frame_data.json
+*.json
 **/__pycache__/
 *.pyc
-
+*.wav
+*.mp3
+*.png
+*.bvh
+*.wav
