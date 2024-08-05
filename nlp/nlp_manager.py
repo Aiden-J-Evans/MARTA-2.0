@@ -125,6 +125,7 @@ def get_background_prompt(story):
     del model, tokenizer, pipe, generation_args, setting_output
     gc.collect()
     torch.cuda.empty_cache()
+    print(setting)
     return str(setting)
 
 def get_animation_prompt(sentence : str, character : str, story : str):
@@ -220,6 +221,7 @@ def get_floor_prompt(story : str) -> str:
     del model, tokenizer, pipe, generation_args, ground_output
     gc.collect()
     torch.cuda.empty_cache()
+    print(ground)
     return str(ground)
 
 def get_ceiling_prompt(story : str) -> str:
@@ -268,6 +270,7 @@ def get_ceiling_prompt(story : str) -> str:
     del model, tokenizer, pipe, generation_args, ceiling_output
     gc.collect()
     torch.cuda.empty_cache()
+    print(ceiling)
     return str(ceiling)
 
 def get_next_movement(current_sentence : str, current_character : str, story : str, character_positions : dict, animation_name : str) -> tuple:

@@ -6,4 +6,6 @@ def render():
     """Activates the rendering script in blender"""
     subprocess.call(["blender", "-P", BLENDER_SCRIPT])
 
-render()
+if __name__ == "__main__":
+    render()
+

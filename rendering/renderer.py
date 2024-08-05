@@ -59,7 +59,7 @@ class AnimationHandler:
             target_armature (bpy.types.Object): the character armature
         """
         # Enable the Rokoko Addon
-        if 'rokoko-studio-live-blender' not in bpy.context.preferences.addons:
+        if 'rokoko-studio-live-blender-master' not in bpy.context.preferences.addons:
             bpy.ops.preferences.addon_enable(module='rokoko-studio-live-blender')
 
         # locate the source armature
@@ -76,7 +76,7 @@ class AnimationHandler:
         # retargets the animation
         bpy.ops.rsl.retarget_animation()
 
-    def load_rig(self, filepath: str, name: str, in_background: bool) -> bpy.types.Object:
+    def load_rig(self, filepath: str, name: str) -> bpy.types.Object:
         """
         Loads an animation rig from an FBX file
         
@@ -85,7 +85,7 @@ class AnimationHandler:
             name: the name of the fbx 
             in_background: whether the rig is being loaded as a main character or a background character
         """
-        bpy.ops.import_scene.fbx(filepath=filepath, use_manual_orientation=True, use_anim=False, axis_forward='-Y' if not in_background else 'Z', axis_up='Z' if not in_background else 'Y')
+        bpy.ops.import_scene.fbx(filepath=filepath, use_manual_orientation=True, use_anim=False, axis_forward='-Y', axis_up='Z')
         rig = bpy.context.active_object
         rig.name = name
         rig.show_in_front = True
@@ -196,7 +196,7 @@ class AnimationHandler:
     
     def insert_rotation_keyframe(self, armature: bpy.types.Object, frame : int, direction : Vector):
         """Insert a rotation keyframe for the armature at the specified frame."""
-        armature.rotation_euler = direction.to_track_quat('Z', 'Y').to_euler()
+        armature.rotation_euler = direction.to_track_quat('-Y', 'Z').to_euler()
         armature.keyframe_insert(data_path="rotation_euler", frame=frame)
 
     def place_armature_with_action(self, armature : bpy.types.Object, actions_dict : dict) -> None:
@@ -514,7 +514,7 @@ class AnimationHandler:
         
         vertices_world = [self.box_object.matrix_world @ v.co for v in self.box_object.data.vertices]
     
-        j=0
+        j = 0
         for i in [0,2,4,6]:
             cam_data = bpy.data.cameras.new(name=f'camera_{j}')
             cam_object = bpy.data.objects.new(name=f'camera_{j}', object_data=cam_data)
@@ -661,7 +661,7 @@ class AnimationHandler:
         self.box_object = bpy.context.active_object
 
     def set_box_properties(self, walls_texture_path, floor_texture_path, ceiling_texture_path,
-                        walls_mapping_scale=(8,8, 8), floor_mapping_scale=(8, 8, 8), ceiling_mapping_scale=(8, 8, 8),
+                        walls_mapping_scale=(1, 1, 1), floor_mapping_scale=(1, 1, 1), ceiling_mapping_scale=(1, 1, 1),
                         walls_mapping_rotation=(0, 0, 0), floor_mapping_rotation=(0, 0, 0), ceiling_mapping_rotation=(0, 0, 0),
                         walls_mapping_translation=(0, 0, 0), floor_mapping_translation=(0, 0, 0), ceiling_mapping_translation=(0, 0, 0)):
         """Set properties of the box with specific textures and mapping settings"""
@@ -842,10 +842,10 @@ class AnimationHandler:
         for character_name, actions_dict in zip(self.characters_data, self.actions_list):
             # set the path for getting characters
             character_path = os.path.join(self.root_path, 'characters')
-
+            
             # Load the main target armature
             target_fbx_path = os.path.join(character_path, f"{character_name}.fbx")
-            self.target_armature = self.load_rig(target_fbx_path, f'{character_name}_rig', False)
+            self.target_armature = self.load_rig(target_fbx_path, f'{character_name}_rig')
             self.rig_matrix_world = self.target_armature.matrix_world.copy()
         
             # set the animation path for getting generated animations
@@ -854,7 +854,9 @@ class AnimationHandler:
             # Load and process each action
             for action_path, data in actions_dict.items():
                 # set the name for the rig
-                rig_name = character_name + '_' + f"({data[0][0]}, {data[0][1]})_rig"
+                start_frame, end_frame = data[0][0], data[0][1]
+
+                rig_name = character_name + '_' + f"({start_frame}, {end_frame})_rig"
                 action_armature = self.load_animation(action_path, rig_name)
                 self.retarget_rokoko(self.target_armature,action_armature)
                 action_armature.hide_set(True)
