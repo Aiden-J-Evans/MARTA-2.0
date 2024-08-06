@@ -522,7 +522,7 @@ class AnimationHandler:
         self.set_box_properties()
         self.create_cameras()
 
-        self.create_light(light_type='SUN', color=(1, 1, 1), energy=1000)
+        self.create_light(light_type='SUN', color=(1, 1, 1), energy=10)
         
         # self.render_animation(self.root_path, sequence_list, output_filename)
 

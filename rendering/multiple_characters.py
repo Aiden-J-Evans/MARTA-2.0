@@ -690,8 +690,8 @@ class AnimationHandler:
 
     def set_box_properties(self, walls_texture_path, floor_texture_path, ceiling_texture_path,
                         walls_texture_coords='UV', floor_texture_coords='UV', ceiling_texture_coords='UV',
-                        walls_mapping_scale=(8,8, 8), floor_mapping_scale=(8, 8, 8), ceiling_mapping_scale=(8, 8, 8),
-                        walls_mapping_rotation=(0, 0, 0), floor_mapping_rotation=(0, 0, 0), ceiling_mapping_rotation=(0, 0, 0),
+                        walls_mapping_scale=(1,1, 1), floor_mapping_scale=(1, 1, 1), ceiling_mapping_scale=(1, 1, 1),
+                        walls_mapping_rotation=(0, 0, 1.5708), floor_mapping_rotation=(0, 0, 0), ceiling_mapping_rotation=(0, 0, 0),
                         walls_mapping_translation=(0, 0, 0), floor_mapping_translation=(0, 0, 0), ceiling_mapping_translation=(0, 0, 0)):
         """Set properties of the box with specific textures and mapping settings"""
         if not self.box_object:
@@ -731,9 +731,9 @@ class AnimationHandler:
 
         # Set mapping properties for walls material
         mapping1.inputs['Scale'].default_value = walls_mapping_scale
-        mapping1.inputs['Rotation'].default_value = walls_mapping_rotation
         if 'Translation' in mapping1.inputs:
             mapping1.inputs['Translation'].default_value = walls_mapping_translation
+        mapping1.inputs['Rotation'].default_value = walls_mapping_rotation
 
         # Create texture coordinate and mapping nodes for floor material
         tex_coord2 = floor.node_tree.nodes.new('ShaderNodeTexCoord')
@@ -973,9 +973,9 @@ def main():
 
     root_path = r"C:\Users\PMLS\Desktop\blender stuff"
     output_filename='final'
-    walls_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\textures\walls_texture.webp"
+    walls_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\textures\landscape.jpg"
     floor_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\textures\floor.jpg"
-    ceiling_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\textures\walls_texture.webp"
+    ceiling_texture_path=r"C:\Users\PMLS\Desktop\blender stuff\textures\sky.jpg"
     textures=[walls_texture_path,floor_texture_path,ceiling_texture_path]
     characters_data = [
         {'name': 'Boy'}, {'name': 'Girl'}
