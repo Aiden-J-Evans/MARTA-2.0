@@ -270,7 +270,7 @@ def get_ceiling_prompt(story : str) -> str:
     del model, tokenizer, pipe, generation_args, ceiling_output
     gc.collect()
     torch.cuda.empty_cache()
-    print(ceiling)
+
     return str(ceiling)
 
 def get_next_movement(current_sentence : str, current_character : str, story : str, character_positions : dict, animation_name : str) -> tuple:

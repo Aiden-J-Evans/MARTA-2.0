@@ -219,7 +219,8 @@ class AnimationHandler:
             direction = target_offset.normalized()
             
             # Use old direction if direction is 0
-            if direction.length == 0: direction = previous_direction
+            if direction.length == 0:
+                direction = previous_direction
             previous_direction = direction
 
             # Calculate the cycle offset after the rig has ben rotated
@@ -315,31 +316,6 @@ class AnimationHandler:
             remaining_period -= original_period
             anim_start = strip.frame_end + 1       
             
-            i = 0
-
-            while remaining_period > 0:
-
-                new_end_frame = min(anim_start + original_period, frame_end)
-                new_action_name = f"{action_name}_{i + 1}"
-                ending_location=start_location+(data[2]-data[1])/num_repeats
-
-                new_actions_dict[new_action_name] = [(anim_start, new_end_frame), start_location, ending_location]
-                start_location=ending_location
-                
-                # Duplicate the action
-                # NOTE: May not be necessary
-                duplicated_action = self.duplicate_action(action_name, new_action_name)
-
-                # Create a new NLA strip for the duplicated action
-                new_strip_name = f"{action_name}_{i + 1}"
-                new_strip = target_armature.animation_data.nla_tracks[0].strips.new(name=new_strip_name, start=int(anim_start), action=duplicated_action)
-                
-                # Update the end frame of the original strip
-                new_strip.frame_end = new_end_frame
-                anim_start = new_strip.frame_end + 1
-                remaining_period -= original_period
-                
-                i += 1
                     
         self.end_frame_anim = anim_start
         return new_actions_dict
@@ -368,6 +344,7 @@ class AnimationHandler:
         bpy.context.collection.objects.link(char_camera)
         camera_dict={'name': f'{character_name}_camera', 'camera': char_camera, 'char_name':character_name, 'previous_loc': Vector((0,0,0)),'smoothed_loc': Vector((0, 0, 0))}
         self.char_cameras.append(camera_dict)
+        print("creating cameras for " + character_name)
 
     def smooth_location(self, current_loc, target_loc):
         """Smooth the transition between the current and target locations."""
@@ -404,6 +381,10 @@ class AnimationHandler:
             character_name=camera_data['char_name']
             camera_char=camera_data['camera']
             target_armature = scene.objects.get(f'{character_name}_rig')
+
+            if not target_armature:
+                raise ValueError("No armature found for character")
+            
             target_armature = target_armature.evaluated_get(dpgraph)
             
             target_bone_name = "head"        
@@ -428,6 +409,8 @@ class AnimationHandler:
             # Find the maximum height difference
             height = max(height_x, height_y, height_z)
             distance=height*2
+
+        
 
             if camera_char and target_armature:
                 # Get the location of the hips bone
@@ -616,6 +599,8 @@ class AnimationHandler:
         # Render the animation
         bpy.ops.render.render('INVOKE_DEFAULT', animation=True)
 
+        print("-" * 20 + "\n\nMARTA COMPLETE\n\n" + "-" * 20)
+
     def create_box(self, Size=100):
         """Create a box around the character to absorb light"""
         
@@ -661,8 +646,8 @@ class AnimationHandler:
         self.box_object = bpy.context.active_object
 
     def set_box_properties(self, walls_texture_path, floor_texture_path, ceiling_texture_path,
-                        walls_mapping_scale=(1, 1, 1), floor_mapping_scale=(1, 1, 1), ceiling_mapping_scale=(1, 1, 1),
-                        walls_mapping_rotation=(0, 0, 0), floor_mapping_rotation=(0, 0, 0), ceiling_mapping_rotation=(0, 0, 0),
+                        walls_mapping_scale=(1, 1, 1), floor_mapping_scale=(100, 100, 100), ceiling_mapping_scale=(1, 1, 1),
+                        walls_mapping_rotation=(0, 0, 90), floor_mapping_rotation=(0, 0, 0), ceiling_mapping_rotation=(0, 0, 0),
                         walls_mapping_translation=(0, 0, 0), floor_mapping_translation=(0, 0, 0), ceiling_mapping_translation=(0, 0, 0)):
         """Set properties of the box with specific textures and mapping settings"""
         if not self.box_object:
@@ -838,14 +823,18 @@ class AnimationHandler:
 
     def run(self):
         self.clear_scene()
-        
+        loaded_rigs = {}
         for character_name, actions_dict in zip(self.characters_data, self.actions_list):
             # set the path for getting characters
             character_path = os.path.join(self.root_path, 'characters')
             
             # Load the main target armature
             target_fbx_path = os.path.join(character_path, f"{character_name}.fbx")
-            self.target_armature = self.load_rig(target_fbx_path, f'{character_name}_rig')
+            if character_name not in loaded_rigs.keys():
+                self.target_armature = self.load_rig(target_fbx_path, f'{character_name}_rig')
+                loaded_rigs[character_name] = self.target_armature
+            else:
+                self.target_armature = loaded_rigs[character_name]
             self.rig_matrix_world = self.target_armature.matrix_world.copy()
         
             # set the animation path for getting generated animations

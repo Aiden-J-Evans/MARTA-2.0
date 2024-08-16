@@ -149,5 +149,5 @@ for i, sentence_tokens in enumerate(sentences):
 timeline['end_frame'] = next_frame
 with open('frame_data.json', 'w', encoding='utf-8') as f:
     json.dump(timeline, f, ensure_ascii=False, indent=4)
-#render()
+render()
 
