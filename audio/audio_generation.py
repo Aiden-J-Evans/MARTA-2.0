@@ -4,7 +4,7 @@ from gtts import gTTS
 # use musicgen-small,medium
 
 
-def generate_audio(index, prompt, length=10) -> str:
+def generate_audio(index, prompt, length=10, story_name="default") -> str:
   """
   Generates an audioclip using a transformer
   
@@ -30,13 +30,13 @@ def generate_audio(index, prompt, length=10) -> str:
 
   sampling_rate = model.config.audio_encoder.sampling_rate
 
-  path = os.path.join(os.getcwd(), "audio", "generated_audio", "background" + str(index) + ".wav")
+  path = os.path.join(os.getcwd(), "audio", "generated_audio", story_name, "background" + str(index) + ".wav")
 
   scipy.io.wavfile.write(path, rate=sampling_rate, data=audio_values[0, 0].numpy())
 
   return path
 
-def generate_voiceover(index=int, sentence=str) -> str:
+def generate_voiceover(index=int, sentence=str, story_name=str) -> str:
   """
   Generates an audio clip narrating the given sentence.
 
@@ -49,7 +49,9 @@ def generate_voiceover(index=int, sentence=str) -> str:
   """
   print("Generating voiceover...")
   tts = gTTS(text=sentence, lang='en')
-  path = os.path.join(os.getcwd(),  "audio", "generated_audio", "speech" + str(index) + ".mp3") 
+  path = os.path.join(os.getcwd(),  "audio", "generated_audio", story_name, "speech" + str(index) + ".mp3") 
   tts.save(path)
   return path
+
+
 
