@@ -1,6 +1,6 @@
 import subprocess, os, torch, gc
 
-def create_animation(prompt, length=5):
+def create_animation(prompt, length = 5, story_name=str):
     """Genreates an animation from a given prompt and length\n
     !!! Automatically naviages to the momask-codes directory !!!\n
     Args:
@@ -11,14 +11,23 @@ def create_animation(prompt, length=5):
         (str) The new path to the generated animation
     """
     print("Generating animation...")
+
+    length *= 32
     os.chdir("momask-codes")
-    subprocess.call(["python", "gen_t2m.py", "--gpu_id", "0", "--ext", prompt, "--text_prompt", "\""+ prompt +"\"", "--motion_length", str(length*20)], shell=True)
+    subprocess.call(["python", "gen_t2m.py", "--gpu_id", "0", "--ext", prompt, "--text_prompt", "\""+ prompt +"\"", "--motion_length", str(length)], shell=True)
     os.chdir("..")
-    og_path = os.path.join(os.getcwd(), "momask-codes", "generation", prompt, "animations", "0", "sample0_repeat0_len" + str(length*20) + ".bvh") 
-    new_path = os.path.join(os.getcwd(), "rendering", "animations", prompt + ".bvh") 
+
+    og_path = os.path.join(os.getcwd(), "momask-codes", "generation", prompt, "animations", "0", "sample0_repeat0_len" + str(length) + ".mp4") 
+    new_path = new_path = os.path.join(os.getcwd(), "rendering", "animations", story_name, prompt + ".mp4") 
     os.replace(og_path, new_path)
+    
+    og_path = os.path.join(os.getcwd(), "momask-codes", "generation", prompt, "animations", "0", "sample0_repeat0_len" + str(length) + ".bvh") 
+    new_path = os.path.join(os.getcwd(), "rendering", "animations", story_name, prompt + ".bvh") 
+    os.replace(og_path, new_path)
+
+   
+
     torch.cuda.empty_cache()
     gc.collect()
     return new_path
 
-#create_animation("Goliath falls down")

@@ -1,4 +1,4 @@
-# MARTA-2.0
+# MARTA-2.0 (Modern Automatic Renderings from Text to Animations) Alpha Build
 MARTA is a proof of concept for a text-to-3D animation program that utilizes numerous AI models to generate a cohesive video.
 
 ## Set-up :wrench:
@@ -12,6 +12,7 @@ MARTA is a proof of concept for a text-to-3D animation program that utilizes num
 5. Navigate to MARTA-2.0 in your terminal
 6. Ensure you have [Git](https://git-scm.com/downloads) installed
 7. Install [Blender](https://www.blender.org/), we used version 4.1
+8. Install [Rokoko Blender Addon](https://www.rokoko.com/integrations/blender)
 
 ### Environment:
 
@@ -77,6 +78,20 @@ When you run the script, you will be required to download all models that MARTA 
 Please note that downloading these models requires around ***15 GB of disk space***.
 
 After these models have downloaded, you will be prompted in your terminal to enter your story.
+
+### Changing Details After Render
+
+If you are unsatisfied with the render, you are able to change the textures, animations, and audio if you please. You must replace them in their respective folders for this change to occur. To just run the rendering script, you can use either in your command prompt:
+
+```
+blender -P rendering/renderer.py
+```
+or
+```
+python rendering/start_renderer.py
+```
+
+
 
 
 </details>
