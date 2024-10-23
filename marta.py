@@ -2,13 +2,13 @@ from rendering.start_render import render
 from nlp.nlp_manager import *
 from texture_generation.stable import generate_image
 from audio.audio_generation import generate_audio, generate_voiceover
-from rendering.momask_utils import create_animation
+from rendering.momask_utils import *
 
 from spacy import load
 from transformers import pipeline
 import json, torch, os
 
-def set_idle_animation(character_dict : dict, character_positions : dict, character : str):
+def set_idle_animation(character_dict : dict, character_positions : dict, character : str, length: int, story_name : str, index : int):
     """
     Sets a character's animation data to the idle values
     
@@ -18,7 +18,7 @@ def set_idle_animation(character_dict : dict, character_positions : dict, charac
         character (str): The name of the character (lowercase)
     """
     last_position = character_positions.get(character, [(len(character_positions), 0, 0)])[-1]
-    character_dict[character] = {'animation': 'idle', 'sequence_end_position': last_position}
+    character_dict[character] = {'animation': create_idle(length, story_name=story_name, index=index), 'sequence_end_position': last_position}
     character_positions.setdefault(character, []).append(last_position)
     
 def set_generated_animation(story: str, character_dict : dict, character_positions : dict, sentence : str, character : str, sequence_length : int, story_name: str):
@@ -48,14 +48,14 @@ def create_directories(story_name):
     """
     os.makedirs(os.path.join(os.getcwd(), "audio", "generated_audio", story_name), exist_ok=True)
     os.makedirs(os.path.join(os.getcwd(), "rendering", "animations", story_name), exist_ok=True)
-    os.makedirs(os.path.join(os.getcwd(), "rendering", "final_renders", story_name), exist_ok=True)
     os.makedirs(os.path.join(os.getcwd(), "texture_generation", "generated_images", story_name), exist_ok=True)
-    os.makedirs(os.path.join(os.getcwd(), "rendering", "frame_data"), exist_ok=True)
+    os.makedirs(os.path.join(os.getcwd(), "output", story_name), exist_ok=True)
     
 
 story_name = input("Please enter your story's name: ")
 story = input("Please enter your story (End with a period): ")
 quality = input("What would you like the quality of your render to be? (low, med, high, best) ")
+save_file = True if input("Would you like to save the .blend file? (Y/n) ").strip().lower() == "y" else False
 nlp = load("en_core_web_sm")
 doc = nlp(story)
 
@@ -114,7 +114,7 @@ classifier = pipeline("zero-shot-classification", device="cuda" if torch.cuda.is
 
 
 character_positions = {}
-
+idle_index = 0
 for i, sentence_tokens in enumerate(sentences):
     # get setence (without period)
     sentence = ' '.join([str(token) for token in sentence_tokens])
@@ -144,18 +144,22 @@ for i, sentence_tokens in enumerate(sentences):
             if actions and index < len(actions):
                 set_generated_animation(story, character_dict, character_positions, sentence, character, sequence_length, story_name)
             else:
-                set_idle_animation(character_dict, character_positions,character)
+                set_idle_animation(character_dict, character_positions,character, sequence_length, story_name, idle_index)
+                idle_index += 1
 
     elif actions: # this gives the last action to the most recent character to be metioned if no characters were metioned in this sentence
         character = all_characters[-1]
         set_generated_animation(story, character_dict, character_positions, sentence, character, sequence_length, story_name)
+        idle_index += 1
     else:
         for character in all_characters:
-            set_idle_animation(character_dict, character_positions, character)
+            set_idle_animation(character_dict, character_positions, character, sequence_length, story_name, idle_index)
+            idle_index += 1
 
     # if characters are not mentioned in the current sentence, set their animation to idle
     for character in set(all_characters) - set(currrent_characters):
-        set_idle_animation(character_dict, character_positions, character)
+        set_idle_animation(character_dict, character_positions, character, sequence_length, story_name, idle_index)
+        idle_index += 1
 
     # saves the frames
     timeline[str(next_frame)] = {'audio_paths': [background_audio_path, tts_audio_path], 'characters': character_dict}
@@ -164,9 +168,10 @@ for i, sentence_tokens in enumerate(sentences):
 
 
 timeline['render_quality'] = quality.lower().strip()
-timeline['render_output'] = os.path.join(os.getcwd(), "rendering", "final_renders", story_name, story_name + ".mp4")
+timeline['render_output'] = os.path.join(os.getcwd(), "output", story_name, story_name + ".mp4")
+timeline['blender_output'] = os.path.join(os.getcwd(), "output", story_name, story_name + ".blend") if save_file else ""
 timeline['end_frame'] = next_frame
-frame_data_path = os.path.join(os.getcwd(), "rendering", "frame_data", story_name.replace(" ", "_") + "_frame_data.json")
+frame_data_path = os.path.join(os.getcwd(), "output", story_name, story_name.replace(" ", "_") + "_frame_data.json")
 with open(frame_data_path, 'w', encoding='utf-8') as f:
     json.dump(timeline, f, ensure_ascii=False, indent=4)
 render(frame_data_path)

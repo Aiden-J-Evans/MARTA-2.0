@@ -8,5 +8,5 @@ def render(frame_data_path):
 
 if __name__ == "__main__":
     story_name = input("What is the name of the story you want to render? ")
-    render(os.path.join(os.getcwd(), "rendering", "frame_data", story_name.replace(" ", "_") + "_frame_data.json"))
+    render(os.path.join(os.getcwd(), "output", story_name, story_name.replace(" ", "_") + "_frame_data.json"))
 

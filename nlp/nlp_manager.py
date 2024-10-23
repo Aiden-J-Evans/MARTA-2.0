@@ -29,7 +29,7 @@ def get_object_list(story):
         A python list containing possible objects.
     """
 
-    torch.random.manual_seed(0)
+    torch.random.seed()
 
     model = AutoModelForCausalLM.from_pretrained(
             "microsoft/Phi-3-mini-4k-instruct", 
@@ -91,7 +91,7 @@ def get_background_prompt(story):
     Returns:
         The string prompt for the background image.
     """
-    torch.random.manual_seed(0)
+    torch.random.seed()
 
     model = AutoModelForCausalLM.from_pretrained(
             "microsoft/Phi-3-mini-4k-instruct", 
@@ -138,7 +138,7 @@ def get_animation_prompt(sentence : str, character : str, story : str):
     Returns:
         The string prompt for the background animation.
     """
-    torch.random.manual_seed(random.randint(0,200))
+    torch.random.seed()
 
     model = AutoModelForCausalLM.from_pretrained(
             "microsoft/Phi-3-mini-4k-instruct", 
@@ -185,7 +185,7 @@ def get_floor_prompt(story : str) -> str:
     Returns:
         A string prompt for the image generator.
     """
-    torch.random.manual_seed(0)
+    torch.random.seed()
 
     model = AutoModelForCausalLM.from_pretrained(
             "microsoft/Phi-3-mini-4k-instruct", 
@@ -209,7 +209,7 @@ def get_floor_prompt(story : str) -> str:
             "do_sample": True,
         }
     
-    ground_prompt = "Create a prompt for generating a detailed floor texture based on the setting described in: \"" + story + "\". The prompt should focus on the environment, capturing the mood and atmosphere without including characters or objects. Ensure the final prompt is concise and suitable for an image generator and less than 77 tokens."
+    ground_prompt = "Create a 1 word prompt (such as 'grass' or 'gravel') for generating a floor texture based on the setting described in: \"" + story + "\". The prompt should focus on the environment, capturing the mood and atmosphere without including characters or objects. Ensure the final prompt is concise and suitable for an image generator and less than 77 tokens."
 
     ground_message = [
         {"role": "user", "content" : ground_prompt},
@@ -234,7 +234,7 @@ def get_audio_prompt(sentence, story):
     Returns:
         The string prompt for the background image.
     """
-    torch.random.manual_seed(random.randint(0, 10000))
+    torch.random.seed()
 
     model = AutoModelForCausalLM.from_pretrained(
             "microsoft/Phi-3-mini-4k-instruct", 
@@ -281,7 +281,7 @@ def get_ceiling_prompt(story : str) -> str:
     Returns:
         A string prompt for the image generator.
     """
-    torch.random.manual_seed(0)
+    torch.random.seed()
 
     model = AutoModelForCausalLM.from_pretrained(
             "microsoft/Phi-3-mini-4k-instruct", 
@@ -305,7 +305,7 @@ def get_ceiling_prompt(story : str) -> str:
             "do_sample": True,
         }
     
-    ceiling_prompt = "Create a prompt for generating a detailed ceiling image based on the setting described in: \"" + story + "\". The prompt should focus on the environment, capturing the mood and atmosphere without including characters or objects. Ensure the final prompt is concise and suitable for an image generator and less than 77 tokens."
+    ceiling_prompt = "Create a prompt for generating a detailed sky image based on the setting described in: \"" + story + "\". The prompt should focus on the environment, capturing the mood and atmosphere without including characters or objects. Ensure the final prompt is concise and suitable for an image generator and less than 77 tokens."
 
     ceiling_message = [
         {"role": "user", "content" : ceiling_prompt},
@@ -330,7 +330,7 @@ def get_next_movement(current_sentence : str, current_character : str, story : s
     Returns:
         The string prompt for the background image.
     """
-    torch.random.manual_seed(0)
+    torch.random.seed()
 
     model = AutoModelForCausalLM.from_pretrained(
             "microsoft/Phi-3-mini-4k-instruct", 
@@ -355,7 +355,6 @@ def get_next_movement(current_sentence : str, current_character : str, story : s
         }
     
     position_prompt = "You must hypothesize the position that the character will move to by the end of the sentence. For context, the entire story is \"" + story + "\". The current character is: " + current_character + ". The current sentence is: \"" + current_sentence + "\" The name of the animation the character performs over this sentence is: " + animation_name + ". For more context, here are the previous vector coordinates of this character and the other characters in the story: " + "".join([name + ": " + "".join([str(p) + "," for p in positions]) for name, positions in character_positions.items()]) + ". Provide the new estimated Vector position for the character in a python tuple. It should only be the tuple, no other tokens. If you fail to provide a response that python can evaluate, the program will fail. Also ensure that different characters are not in the same position."
-    print(position_prompt)
     position_message = [
         {"role": "user", "content" : position_prompt},
     ]
