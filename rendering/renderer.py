@@ -3,7 +3,7 @@ from mathutils import Vector, Matrix
 import os, math, json, sys
 
 class AnimationHandler:
-    def __init__(self, root_path, characters_data, actions_list,textures, last_frame, audio_frames, background_characters, render_path, render_quality):
+    def __init__(self, root_path, characters_data, actions_list,textures, last_frame, audio_frames, background_characters, render_path, render_quality, blender_output_path):
         self.root_path = root_path
         self.characters_data = characters_data
         self.actions_list = actions_list
@@ -23,6 +23,7 @@ class AnimationHandler:
         self.loaded_rigs = {}
         self.render_path = render_path
         self.render_quality = render_quality
+        self.blender_output_path = blender_output_path
         
     def clear_scene(self):
         """Delete all objects from the scene"""
@@ -58,31 +59,31 @@ class AnimationHandler:
         Retargets an animation to an armature
 
         Args:
-            source_armature (bpy.types.Object): the animation armature
-            target_armature (bpy.types.Object): the character armature
+            source_armature (bpy.types.Object): the character armature
+            target_armature (bpy.types.Object): the animation armature
         """
         # Enable the Rokoko Addon
         if 'rokoko-studio-live-blender-master' not in bpy.context.preferences.addons:
             bpy.ops.preferences.addon_enable(module='rokoko-studio-live-blender')
+        target_armature.delta_rotation_euler = source_armature.delta_rotation_euler
+        target_armature.location = source_armature.location
 
-        # locate the source armature
-        if source_armature:
-            bpy.context.scene.rsl_retargeting_armature_source = target_armature
-
-        # locate the target armature
-        if target_armature:
-            bpy.context.scene.rsl_retargeting_armature_target = source_armature
-
+        #if target_armature.animation_data:
+           # target_armature.animation_data_clear()
         
+        bpy.context.scene.rsl_retargeting_armature_source = target_armature
+        bpy.context.scene.rsl_retargeting_armature_target = source_armature
+
         # builds the bone list
         bpy.ops.rsl.build_bone_list()
         
         # retargets the animation
         bpy.ops.rsl.retarget_animation()
+        
 
         print(source_armature.name + " " + str(source_armature.location))
 
-    def load_rig(self, filepath: str, name: str) -> bpy.types.Object:
+    def load_rig(self, filepath: str, name: str, posX: int) -> bpy.types.Object:
         """
         Loads an animation rig from an FBX file
         
@@ -95,7 +96,22 @@ class AnimationHandler:
         rig = bpy.context.active_object
         rig.name = name
         rig.show_in_front = True
-        rig.location.z = -10
+        rig.location.x = posX
+        rig.location.z = -50
+
+        bpy.ops.object.mode_set(mode='OBJECT')
+        
+        # Deselect all objects
+        bpy.ops.object.select_all(action='DESELECT')
+        
+        # Select the rig
+        rig.select_set(True)
+        
+        # Set the rig as the active object
+        bpy.context.view_layer.objects.active = rig
+        
+        # Move the origin to the 3D cursor
+        bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
         print(f"\nLoaded {name}")
         return rig
     
@@ -114,12 +130,14 @@ class AnimationHandler:
         bpy.ops.import_anim.bvh(filepath=filepath, axis_forward='Z', axis_up='Y')
         rig = bpy.context.active_object
         rig.name = name
+        rig.location = (0.0, 0.0, 0.0)
+        rig.scale = (1.0, 1.0, 1.0)
         rig.show_in_front = True
         rig.animation_data.action.name = f'{name}_action'
         print(f"\nloaded {filepath}")
         return rig
 
-    def push_action_to_nla(self, armature: bpy.types.Object, action_name : str):
+    def push_action_to_nla(self, armature: bpy.types.Object, action_name : str, end_frame : int):
         """
         Push down action to NLA
         
@@ -183,9 +201,7 @@ class AnimationHandler:
         
         start_pos, end_pos = [0, 0, 0], [0, 0, 0]
         for curve in action.fcurves:
-            if "mixamorig:Hips" not in curve.data_path: 
-                continue
-            if "location" not in curve.data_path: 
+            if "mixamorig:Hips" not in curve.data_path or "location" not in curve.data_path: 
                 continue
             channel = curve.array_index
             start_pos[channel] = curve.evaluate(0)
@@ -205,35 +221,41 @@ class AnimationHandler:
         armature.location = Vector((location[0], location[1], 0))
         armature.keyframe_insert(data_path="location", frame=frame)
     
-    def insert_rotation_keyframe(self, armature: bpy.types.Object, frame : int, direction : Vector):
+    def insert_rotation_keyframe(self, armature: bpy.types.Object, frame : int, direction : int):
         """Insert a rotation keyframe for the armature at the specified frame."""
-        armature.rotation_euler = direction.to_track_quat('-Y', 'Z').to_euler()
+        armature.rotation_euler.z = direction * math.pi / 180
         armature.keyframe_insert(data_path="rotation_euler", frame=frame)
 
-    def place_armature_with_action(self, armature : bpy.types.Object, actions_dict : dict) -> None:
+
+    def place_armature_with_action(self, armature : bpy.types.Object, actions_dict : dict, index : int) -> None:
         # Set the initial location and keyframe
         for action_name, data in actions_dict.items():
             strip = self.get_strip(armature, action_name)
             
             # Get the positional offset of a single cycle with no rotational changes
             cycle_offset = self.get_cycle_offset(armature, strip.action, strip.frame_end - strip.frame_start)
-            
+            if cycle_offset != Vector((0, 0, 0)):
+                print()
+                print(f"Cycle offset: {cycle_offset}")
+                print()
             # Determine total desired offset for the cycle
             start_location=data[1]
             end_location=data[2]
-
             displacement = end_location - start_location
             total_frames = strip.frame_end - strip.frame_start
+            
             if displacement != Vector((0, 0, 0)):
+                armature.location = Vector((0, 0, 0))
                 for i, frame in enumerate(range(int(strip.frame_start), int(strip.frame_end))):
                     progress = i / total_frames
                     current_location = start_location + (displacement * progress)
-                    self.insert_location_keyframe(armature, frame, current_location)
-                self.insert_location_keyframe(armature, strip.frame_end, end_location)
+                    self.insert_location_keyframe(armature, frame, current_location + cycle_offset)
+                self.insert_location_keyframe(armature, strip.frame_end, end_location + cycle_offset)
                 print(f"Inserted from {start_location} to {end_location} in {total_frames} frames")
-
+            else:
+                self.insert_location_keyframe(armature, strip.frame_end, start_location + cycle_offset)
+                print(f"inserting position for {armature} at {start_location - cycle_offset}")
             
-        
             # Update the scene
             bpy.context.view_layer.update()
             
@@ -438,14 +460,14 @@ class AnimationHandler:
                         active_camera = f"{character_name}"    
                         active_character_count += 1
                     break
-
-        if active_character_count != 1:
+        self.update_closest_camera_rotation()
+        #if active_character_count != 1:
             # Use scene camera
-            self.update_closest_camera_rotation()
-        else:
-            char_camera=bpy.data.objects.get(f'{active_camera}_camera')
-            marker = scene.timeline_markers.new(name=char_camera.name, frame=current_frame)
-            marker.camera = char_camera
+            #self.update_closest_camera_rotation()
+        #else:
+           # char_camera=bpy.data.objects.get(f'{active_camera}_camera')
+            #marker = scene.timeline_markers.new(name=char_camera.name, frame=current_frame)
+            #marker.camera = char_camera
            
     def create_scene_cameras(self):
         avg_hip_bone = Vector((0,0,0))
@@ -487,13 +509,15 @@ class AnimationHandler:
         print("\nCreated scene cameras")
           
     def update_closest_camera_rotation(self):
-        avg_hip_bone=Vector((0,0,0))
-        avg_head_bone_world_location=Vector((0,0,0))
-        n=0
+        avg_hip_bone = Vector((0, 0, 0))
+        avg_head_bone_world_location = Vector((0, 0, 0))
+        n = 0
         target_bone_names = ['hip', 'pelvis', 'hips']
+        
+        # Calculate average head and hip positions
         for character in self.characters_data:
-            character_name=character
-            armature=bpy.data.objects.get(f'{character_name}_rig')
+            character_name = character
+            armature = bpy.data.objects.get(f'{character_name}_rig')
 
             target_bone_name = "head"        
             for bone in armature.pose.bones:
@@ -509,22 +533,33 @@ class AnimationHandler:
                     hip_bone = bone
                     break
             
-
             hip_bone_world_location = armature.matrix_world @ hip_bone.head
-            avg_head_bone_world_location+=head_bone_world_location
-            avg_hip_bone+=hip_bone_world_location
-            n+=1
+            avg_head_bone_world_location += head_bone_world_location
+            avg_hip_bone += hip_bone_world_location
+            n += 1
         
-        avg_hip_bone=avg_hip_bone/n
-        avg_head_bone_world_location=avg_head_bone_world_location/n
-        # Calculate distances to the hip bone and find the closest camera
-        closest_camera = None
-        closest_distance = float('inf')  # Initializing to infinity for comparison
+        # Average the positions
+        avg_hip_bone /= n
+        avg_head_bone_world_location /= n
 
-        for i, cam in enumerate(self.scene_cameras):
-            distance = ((avg_hip_bone) - cam.location).length
-            if distance < closest_distance:
-                closest_distance = distance
+        # Calculate the average forward direction of the characters
+        avg_forward_direction = (avg_head_bone_world_location - avg_hip_bone).normalized()
+
+        # Initialize for finding the best camera
+        closest_camera = None
+        best_alignment = -float('inf')  # Dot product closest to 1 is the best alignment
+
+        # Compare the alignment of the forward direction to each camera
+        for cam in self.scene_cameras:
+            # Get the camera's forward vector (negative Z in Blender's coordinate system)
+            cam_forward_vector = -cam.matrix_world.to_quaternion() @ Vector((0, 0, 1))
+            
+            # Calculate the alignment using the dot product
+            alignment = avg_forward_direction.dot(cam_forward_vector)
+            
+            # Check if this camera is more aligned than the previous best
+            if alignment > best_alignment:
+                best_alignment = alignment
                 closest_camera = cam
 
         if closest_camera:
@@ -599,6 +634,11 @@ class AnimationHandler:
         # Render the animation
         bpy.ops.render.render('INVOKE_DEFAULT', animation=True)
 
+    def initial_place_characters(self):
+        for character in self.loaded_rigs.values():
+            character.location.z = -self.max_height;
+
+
 
     def create_box(self, Size=100):
         """Create a box around the character to absorb light"""
@@ -647,8 +687,8 @@ class AnimationHandler:
         print("\nCreated box")
 
     def set_box_properties(self, walls_texture_path, floor_texture_path, ceiling_texture_path,
-                        walls_mapping_scale=(1, 1, 1), floor_mapping_scale=(100, 100, 100), ceiling_mapping_scale=(1, 1, 1),
-                        walls_mapping_rotation=(0, 0, 90), floor_mapping_rotation=(0, 0, 0), ceiling_mapping_rotation=(0, 0, 0),
+                        walls_mapping_scale=(3, 4, 1), floor_mapping_scale=(100, 100, 100), ceiling_mapping_scale=(1, 1, 1),
+                        walls_mapping_rotation=(0, 0, 1.57), floor_mapping_rotation=(0, 0, 0), ceiling_mapping_rotation=(0, 0, 0),
                         walls_mapping_translation=(0, 0, 0), floor_mapping_translation=(0, 0, 0), ceiling_mapping_translation=(0, 0, 0)):
         """Set properties of the box with specific textures and mapping settings"""
         if not self.box_object:
@@ -820,10 +860,10 @@ class AnimationHandler:
         # Add audio strips
         for frame, audio_paths in self.audio_frames:
             if not audio_paths: continue
-            for audio_path in audio_paths:
-                sequence_editor.sequences.new_sound(name=os.path.basename(audio_path), filepath=audio_path, channel=1, frame_start=frame)
+            sequence_editor.sequences.new_sound(name=os.path.basename(audio_paths[0].split()[-2]), filepath=audio_paths[0], channel=1, frame_start=frame)
+            sequence_editor.sequences.new_sound(name=os.path.basename(audio_paths[1].split()[-2]), filepath=audio_paths[1], channel=2, frame_start=frame)
 
-    def face_other_characters(self, character_name, other_name, frame):
+    def face_closest_character(self, armature) -> float: 
         """
         Rotates the main character's armature to face another character's armature.
 
@@ -831,38 +871,64 @@ class AnimationHandler:
             character_name (str): The name of the main character's armature.
             other_name (str): The name of the other character's armature.
         """
-        main_armature = self.loaded_rigs[character_name]
-        other_armature = self.loaded_rigs[other_name]
-
+        closest_armature = self.find_closest_armature(armature)
+        
+        if closest_armature is None:
+            print("No other armatures found.")
+            return
         # Get the locations of both armatures
-        main_location = main_armature.location
-        other_location = other_armature.location
+        other_location = closest_armature.location
 
         # Calculate the direction vector from main to other
-        direction = other_location - main_location
-
-        # Debugging: Print the direction vector
+        direction = other_location - armature.location
+        print(armature.location)
+        print(other_location)
 
         # Normalize the direction vector
         direction.normalize()
 
+        # Calculate the angle to rotate the main armature to face the closest one
+        # Assuming rotation around Z axis (common for 2D or top-down perspective)
+        target_angle = math.atan2(direction.y, direction.x)  # Note y, x for atan2
 
-        # Calculate the angle to rotate the main armature to face the other armature
-        target_angle = math.atan2(direction.x, direction.y)
-
-        # Convert the angle to a rotation matrix
+        # Convert the angle to a rotation matrix for the Z axis
         rotation_matrix = Matrix.Rotation(target_angle, 4, 'Z')
-
+        print(target_angle * 180 / math.pi)
         # Apply the rotation to the main armature
-        new_matrix = rotation_matrix @ main_armature.matrix_world
-        rotation_euler = new_matrix.to_euler()
+        return target_angle  # Directly set the Z rotation
+    
+        
+
+        print(f"Rotated {armature.name} to face {closest_armature.name}")
+        
+
+    def find_closest_armature(self, target_armature):
+        closest_armature = None
+        main_location = target_armature.location
+        min_distance = float("inf")
+        for other_armature in self.loaded_rigs.values():
+            if other_armature == target_armature:
+                continue
+            distance = (main_location - target_armature.location).length
+            if distance < min_distance:
+                closest_armature = other_armature
+                min_distance = distance
+        return closest_armature
+
+    def save_as_file(self):
+        """Saves the .blend file if the user has accepted the option"""
+        if self.blender_output_path:
+            if os.path.exists(self.blender_output_path):
+                os.remove(self.blender_output_path)
+            bpy.ops.wm.save_as_mainfile(filepath=self.blender_output_path)
 
     def on_render_complete(scene, depsgraph, context):
         print("\nRender Saved\n")
         print("*" * 14)
         print("\nMARTA COMPLETE\n")
         print("*" * 14)
-        #bpy.ops.wm.quit_blender()
+        
+        bpy.ops.wm.quit_blender()
     
 
 
@@ -870,6 +936,7 @@ class AnimationHandler:
         self.clear_scene()
         bpy.app.handlers.render_complete.append(self.on_render_complete)
         self.loaded_rigs = {}
+        i = 0
         for character_name, actions_dict in zip(self.characters_data, self.actions_list):
             # set the path for getting characters
             character_path = os.path.join(self.root_path, 'characters')
@@ -877,37 +944,51 @@ class AnimationHandler:
             # Load the main target armature
             target_fbx_path = os.path.join(character_path, f"{character_name}.fbx")
             if character_name not in self.loaded_rigs.keys():
-                self.target_armature = self.load_rig(target_fbx_path, f'{character_name}_rig')
+                self.target_armature = self.load_rig(target_fbx_path, f'{character_name}_rig', posX=len(self.loaded_rigs))
                 self.loaded_rigs[character_name] = self.target_armature
             else:
                 self.target_armature = self.loaded_rigs[character_name]
             self.rig_matrix_world = self.target_armature.matrix_world.copy()
         
             # Load and process each action
+            
             for action_path, data in actions_dict.items():
                 # set the name for the rig
                 start_frame, end_frame = data[0][0], data[0][1]
-
                 rig_name = character_name + '_' + f"({start_frame}, {end_frame})_rig"
-                action_armature = self.load_animation(action_path, rig_name)
+                action_armature = self.load_animation(filepath=action_path, name=rig_name)
                 self.retarget_rokoko(self.target_armature, action_armature)
                 action_armature.hide_set(True)
-                self.push_action_to_nla(self.target_armature, f"{rig_name}_action")
+                self.push_action_to_nla(armature=self.target_armature, action_name=f"{rig_name}_action", end_frame=end_frame)
+            
         
             # Organize the sequences and positions
-            new_dict = self.organize_nla_sequences(self.target_armature, actions_dict, character_name)
-            self.place_armature_with_action(self.target_armature, new_dict)
+            
+            i += 1
+
  
             bpy.context.scene.frame_current = 1
             bpy.context.view_layer.update()
-            self.create_character_cameras(character_name)
+            #self.create_character_cameras(character_name)
+        
+        for i, (character_name, actions_dict) in enumerate(zip(self.characters_data, self.actions_list)):
+            self.target_armature = self.loaded_rigs[character_name]
+            new_dict = self.organize_nla_sequences(self.target_armature, actions_dict, character_name)
+            self.place_armature_with_action(self.target_armature, new_dict, i)
+
+
+        for i, armature in enumerate(self.loaded_rigs.values()):
+            #self.insert_location_keyframe(armature,)
+            #angle = self.face_closest_character(armature)
+            #self.insert_rotation_keyframe(armature, 0, direction = angle)
+            self.insert_rotation_keyframe(armature, 0, 90 * (1 if not i % 2 else -1))
 
         # Register the frame change handler to follow the character during animation
         self.create_box()
         bpy.context.view_layer.update()
 
         self.create_scene_cameras()
-        self.set_box_properties(self.textures[0],self.textures[1], self.textures[2])
+        self.set_box_properties(self.textures[0], self.textures[1], self.textures[2])
         self.create_light()
         bpy.app.handlers.frame_change_pre.clear()
         bpy.app.handlers.frame_change_post.clear()
@@ -919,7 +1000,9 @@ class AnimationHandler:
         bpy.context.view_layer.update()
 
         self.add_audio()
+        self.save_as_file()
         self.render_animation(self.render_quality)
+        
         
         
 def main():
@@ -937,7 +1020,7 @@ def main():
     frame_list = [int(key) for key in frame_data if key.isdigit()]
     start_index = 0;
     end_index = 1;
-    mult = 10;
+    position_multiplier = 30;
     # organize information
     for sequence, data in frame_data.items():
         if sequence.isdigit():
@@ -955,7 +1038,7 @@ def main():
                 else:
                     start_pos = Vector(frame_data[str(frame_list[start_index])]['characters'][character]['sequence_end_position'])
                 end_pos = Vector(ani_data['sequence_end_position'])
-                actions_list.append({ani_name: [(start_frame, end_frame), start_pos * mult, end_pos * mult]}) 
+                actions_list.append({ani_name: [(start_frame, end_frame), start_pos * position_multiplier, end_pos * position_multiplier]}) 
                     
             start_index += 1;
             end_index += 1;
@@ -969,8 +1052,9 @@ def main():
     background_characters = []
     render_path = frame_data['render_output']
     render_quality = frame_data['render_quality']
+    blender_output_path = frame_data['blender_output']
     # run the program
-    animation_handler = AnimationHandler(root_path, characters_data, actions_list, textures, last_frame, audio_frames, background_characters, render_path, render_quality)
+    animation_handler = AnimationHandler(root_path, characters_data, actions_list, textures, last_frame, audio_frames, background_characters, render_path, render_quality, blender_output_path)
     animation_handler.run()
  
 main()

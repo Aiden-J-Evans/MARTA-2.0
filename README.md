@@ -1,6 +1,8 @@
 # MARTA-2.0 (Modern Automatic Renderings from Text to Animations) Alpha Build
 MARTA is a proof of concept for a text-to-3D animation program that utilizes numerous AI models to generate a cohesive video.
 
+[![David and Goliath Example](https://img.youtube.com/vi/YWiWgBYj5Io/0.jpg)](https://youtu.be/YWiWgBYj5Io)
+[![Aiden and Musfira Example](https://img.youtube.com/vi/Xa8fUMgMqts/0.jpg)](https://youtu.be/Xa8fUMgMqts)
 ## Set-up :wrench:
 <Details>
 
