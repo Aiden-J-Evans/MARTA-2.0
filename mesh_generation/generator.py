@@ -1,3 +1,9 @@
+#################
+#
+# Author: Aiden
+# Currently not in use, as it requires a newer version of torch
+#
+#################
 import torch
 import os
 from meshgpt_pytorch import (
@@ -6,7 +12,7 @@ from meshgpt_pytorch import (
     mesh_render
 )
 
-def generate_object(prompt):
+def generate_object(prompt : str) -> str:
     """
     !!! Currently not working, needs a newer version of torch incompatible with other parts of the project !!!\n
 
@@ -18,6 +24,7 @@ def generate_object(prompt):
     Returns:
         (str) the path to the object
     """
+    # Code taken from https://huggingface.co/MarcusLoren/MeshGPT-preview
     device = "cuda" if torch.cuda.is_available() else "cpu"
     transformer = MeshTransformer.from_pretrained("MarcusLoren/MeshGPT-preview").to(device)
 

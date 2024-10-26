@@ -1,3 +1,10 @@
+"""
+Author: Aiden
+
+NOTE:
+- This could be replaced with a fine-tuned model for texture generation. the pictures it generates is usually unsatisfactory
+"""
+
 ###########################################################################
 # Code taken from https://huggingface.co/stabilityai/stable-diffusion-2-1 #
 ###########################################################################

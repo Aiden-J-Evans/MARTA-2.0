@@ -1,8 +1,14 @@
-# Load model directly
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
-import torch, gc, random
+"""
+Author: Aiden
+NOTE: 
+- use torch.random.seed() for random asset generation
+- use torch.random.manual_seed() for reproducing asset generation
+"""
 
-def estimate_sentence_length(sentence):
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+import torch, gc
+
+def estimate_sentence_length(sentence : str) -> int:
     """
     Returns the estimated spoken length of the sentence. Averages higher times.
     
@@ -18,10 +24,10 @@ def estimate_sentence_length(sentence):
 # Code taken from https://huggingface.co/microsoft/Phi-3-mini-4k-instruct #
 ###########################################################################
 
-def get_object_list(story):
+def get_object_list(story : str) -> list:
     """
     Uses Microsoft Phi to decide acceptable objects to be generated for the story.
-
+    Currently not in use.
     Args:
         story (str): the entire story whose background objects will be interpreted
 
@@ -54,34 +60,26 @@ def get_object_list(story):
         }
 
     object_prompt = "What are some very simple background objects which stand on the ground that would make sense for this story: \"" + story + "\" Return the 1-word objects in a python list."
-    background_prompt = "What is a detailed prompt for an AI image generator with the task of generating a background image relating to this story's location: \"" + story + "\" Don't include any characters or objects in the prompt, it should be the setting only. It also has to be less than 77 tokens."
 
     obj_message = [
         {"role": "user", "content" : object_prompt},
     ]
 
-    setting_message = [
-        {"role": "user", "content" : background_prompt},
-    ]
-
     obj_output = pipe(obj_message, **generation_args)
     list_string = obj_output[0]['generated_text'].replace('```python\n', '').replace('\n```', '').strip()
 
-    setting_output = pipe(setting_message, **generation_args)
-    setting = setting_output[0]['generated_text'].replace('```python\n', '').replace('\n```', '').strip()
-
-    del obj_output, model, tokenizer, pipe, generation_args, setting_output
     gc.collect()
     torch.cuda.empty_cache()
 
     try:
         output = eval(list_string)
-        return [output, str(setting)]
+        return [output]
     except:
         print("Generated object list was not in the correct format. Run MARTA again.")
 
-    
-def get_background_prompt(story):
+# NOTE: With Phi-3, hallucinations are possible. You can see this when the prompt is passed to MoMask
+
+def get_background_prompt(story : str) -> str:
     """
     Uses Microsoft Phi to decide acceptable objects to be generated for the story.
 
@@ -122,19 +120,17 @@ def get_background_prompt(story):
     setting_output = pipe(setting_message, **generation_args)
     setting = setting_output[0]['generated_text'].replace('```python\n', '').replace('\n```', '').strip()
 
-    del model, tokenizer, pipe, generation_args, setting_output
     gc.collect()
     torch.cuda.empty_cache()
-    print(setting)
     return str(setting)
 
-def get_animation_prompt(sentence : str, character : str, story : str):
+def get_animation_prompt(sentence : str, character : str) -> str:
     """
     Uses Microsoft Phi to decide acceptable animations to be generated for the story.
 
     Args:
         story (str): the entire story whose background objects will be interpreted
-
+        character (str): the character that the animation is for
     Returns:
         The string prompt for the background animation.
     """
@@ -170,7 +166,6 @@ def get_animation_prompt(sentence : str, character : str, story : str):
     action_output = pipe(action_message, **generation_args)
     action = action_output[0]['generated_text'].replace('```python\n', '').replace('\n```', '').strip()
 
-    del model, tokenizer, pipe, generation_args, action_output
     gc.collect()
     torch.cuda.empty_cache()
     return str(action)
@@ -218,7 +213,6 @@ def get_floor_prompt(story : str) -> str:
     ground_output = pipe(ground_message, **generation_args)
     ground = ground_output[0]['generated_text'].replace('```python\n', '').replace('\n```', '').strip()
 
-    del model, tokenizer, pipe, generation_args, ground_output
     gc.collect()
     torch.cuda.empty_cache()
     print(ground)
@@ -265,7 +259,6 @@ def get_audio_prompt(sentence, story):
     setting_output = pipe(setting_message, **generation_args)
     setting = setting_output[0]['generated_text'].replace('```python\n', '').replace('\n```', '').strip()
 
-    del model, tokenizer, pipe, generation_args, setting_output
     gc.collect()
     torch.cuda.empty_cache()
     print(setting)
@@ -314,21 +307,24 @@ def get_ceiling_prompt(story : str) -> str:
     ceiling_output = pipe(ceiling_message, **generation_args)
     ceiling = ceiling_output[0]['generated_text'].replace('```python\n', '').replace('\n```', '').strip()
 
-    del model, tokenizer, pipe, generation_args, ceiling_output
     gc.collect()
     torch.cuda.empty_cache()
 
     return str(ceiling)
 
-def get_next_movement(current_sentence : str, current_character : str, story : str, character_positions : dict, animation_name : str) -> tuple:
+# TODO: find a way to make this better. position estimation is not perfect
+def get_next_movement(current_sentence : str, current_character : str, story : str, character_positions : dict, animation_name : str) -> list:
     """
     Uses Microsoft Phi to decide acceptable character movement for the story.
 
     Args:
+        current_sentence (str): the entirity of the current sentence
+        current_character (str): the name of the character whose position we want to predict
         story (str): the entire story whose background objects will be interpreted
-
+        character_positions (dict): the entirity of all character positions throughout the story to this point
+        animation_name (str): the description of the animation, used in the prompt
     Returns:
-        The string prompt for the background image.
+        A length 3 list of x, y, z coordinate (z coordinate is not used)
     """
     torch.random.seed()
 
@@ -362,10 +358,7 @@ def get_next_movement(current_sentence : str, current_character : str, story : s
     position_output = pipe(position_message, **generation_args)
     new_positon = position_output[0]['generated_text'].replace('```python\n', '').replace('\n```', '').strip()
 
-    del model, tokenizer, pipe, generation_args, position_output
     gc.collect()
     torch.cuda.empty_cache()
     return eval(new_positon)
 
-if __name__ == "__main__":
-    print(get_background_prompt("There was a boy named Aiden and girl named Musfira in a classroom. Aiden started dancing while Musfira jumped up and down. After, Aiden sat on the ground exhausted while Musfira spun around."))

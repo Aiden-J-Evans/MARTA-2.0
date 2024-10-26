@@ -1,3 +1,9 @@
+"""
+Author: Aiden
+
+NOTE:
+- when ran as main, it starts the rendering for a story based on the json data. useful for testing the same story, or rendering at a better quality when a decent animation is found
+"""
 import subprocess, os
 
 BLENDER_SCRIPT = 'rendering/renderer.py'

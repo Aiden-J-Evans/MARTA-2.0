@@ -1,7 +1,22 @@
+"""
+Author: Aiden \n
+
+NOTE:
+- Compilation of all scripts
+- Should take about 5-10 minutes to complete on a decent GPU
+- Tested on windows 11
+\n
+
+TODO:
+- Test on linux
+- improve models
+
+"""
+
 from rendering.start_render import render
 from nlp.nlp_manager import *
 from texture_generation.stable import generate_image
-from audio.audio_generation import generate_audio, generate_voiceover
+from audio.audio_generation import generate_audio, generate_tts_voiceover
 from rendering.momask_utils import *
 
 from spacy import load
@@ -125,7 +140,7 @@ for i, sentence_tokens in enumerate(sentences):
     #generate background and speech audio based on the sentence
     audio_prompt = get_audio_prompt(sentence, story)
     background_audio_path = generate_audio(i, audio_prompt, sequence_length, story_name)
-    tts_audio_path = generate_voiceover(i, sentence, story_name)
+    tts_audio_path = generate_tts_voiceover(i, sentence, story_name)
     
     # uses a transformer to estimate sentence similarity
     action_score = classifier(str(sentence), ["physical action"])["scores"][0]
